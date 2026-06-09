@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Layout, User, FileText, Briefcase, GraduationCap, Star,
-  ChevronLeft, ChevronRight, Eye, EyeOff, Check,
+  ChevronLeft, ChevronRight, Eye, Check,
   Sparkles, Download, Settings, X, KeyRound, Loader2,
   Target, MapPin, Search,
 } from 'lucide-react'
@@ -45,14 +45,14 @@ const TEMPLATES = [
 // ─── Steps ────────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 'target',     label: 'Your Goal',  icon: Target,        hint: 'What job are you targeting? AI uses this to tailor everything.' },
-  { id: 'template',   label: 'Template',   icon: Layout,        hint: 'Choose a design that fits your style.' },
+  { id: 'target',     label: 'Your Goal',  icon: Target,        hint: 'What job and location? AI uses this to tailor everything.' },
   { id: 'personal',   label: 'About You',  icon: User,          hint: 'Your name, contact info, and professional title.' },
   { id: 'experience', label: 'Experience', icon: Briefcase,     hint: 'Your work history, most recent first.' },
   { id: 'education',  label: 'Education',  icon: GraduationCap, hint: 'Schools, degrees, and programs.' },
-  { id: 'skills',     label: 'Skills',     icon: Star,          hint: 'What you are great at — AI can suggest from your background!' },
-  { id: 'summary',    label: 'Summary',    icon: FileText,      hint: 'AI analyzes all your details and writes a sharp 2-sentence summary.' },
-  { id: 'done',       label: 'Done',       icon: Check,         hint: 'Preview and download your resume.' },
+  { id: 'skills',     label: 'Skills',     icon: Star,          hint: 'What you are great at — AI suggests from your background.' },
+  { id: 'summary',    label: 'Summary',    icon: FileText,      hint: 'AI reads all your details and writes a sharp 2-sentence summary.' },
+  { id: 'design',     label: 'Design',     icon: Layout,        hint: 'Pick your template — preview it here before downloading.' },
+  { id: 'done',       label: 'Done',       icon: Check,         hint: 'Your resume is ready. Download PDF, Word, or Image.' },
 ]
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -62,11 +62,9 @@ export default function BuilderPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const stepParam = parseInt(searchParams.get('step') ?? '0', 10)
   const [step, setStepRaw] = useState(isNaN(stepParam) ? 0 : Math.min(stepParam, STEPS.length - 1))
-  const [showPreview, setShowPreview]       = useState(false)
-  const [showSettings, setShowSettings]     = useState(false)
-  const [showDesignPanel, setShowDesignPanel] = useState(false)
-  const [exporting, setExporting]  = useState(false)
-  const [exportType, setExportType] = useState<'pdf' | 'docx' | 'png' | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const [exporting, setExporting]       = useState(false)
+  const [exportType, setExportType]     = useState<'pdf' | 'docx' | 'png' | null>(null)
 
   // Store
   const templateId       = useBuilderStore(s => s.templateId)
@@ -103,29 +101,33 @@ export default function BuilderPage() {
     try {
       if (type === 'docx') {
         await exportToDOCX({
-          name: [personal.firstName, personal.lastName].filter(Boolean).join(' '),
-          title: personal.professionalTitle,
-          email: personal.email,
-          phone: personal.phone,
-          location: [personal.city, personal.country].filter(Boolean).join(', '),
-          summary: sections.find(s => s.type === 'professional_summary')?.content as string | undefined,
+          name:     [personal.firstName, personal.lastName].filter(Boolean).join(' '),
+          title:    personal.professionalTitle || undefined,
+          email:    personal.email    || undefined,
+          phone:    personal.phone    || undefined,
+          location: [personal.city, personal.country].filter(Boolean).join(', ') || undefined,
+          summary:  personal.summary  || undefined,
           experience: experience.map(e => ({
             position: e.position,
-            company: e.company,
-            dates: [e.startDate, e.isCurrent ? 'Present' : e.endDate].filter(Boolean).join(' – '),
-            bullets: e.bullets.filter(Boolean),
+            company:  e.company,
+            dates:    [e.startDate, e.isCurrent ? 'Present' : e.endDate].filter(Boolean).join(' – '),
+            bullets:  e.bullets.filter(Boolean),
           })),
           education: education.map(e => ({
             school: e.school,
             degree: [e.degree, e.program].filter(Boolean).join(', '),
-            years: [e.startDate, e.endDate ?? 'Present'].filter(Boolean).join(' – '),
+            years:  [e.startDate, e.endDate ?? 'Present'].filter(Boolean).join(' – '),
           })),
           skills: skills.map(s => s.name),
         }, `${baseName}.docx`)
         return
       }
-      const el = document.getElementById('resume-preview-target')
-      if (!el) return
+      // PDF / PNG — capture the rendered resume from the Done step preview
+      const el = document.getElementById('resume-export-canvas')
+      if (!el) {
+        alert('Resume preview not found. Please wait for the page to load fully.')
+        return
+      }
       if (type === 'pdf') await exportToPDF(el, `${baseName}.pdf`)
       if (type === 'png') await exportToPNG(el, `${baseName}.png`)
     } finally {
@@ -177,18 +179,11 @@ export default function BuilderPage() {
 
         {/* Right actions */}
         <div className="flex items-center gap-1">
-          <LightHeaderBtn icon={<Layout className="h-3.5 w-3.5" />} label="Design" onClick={() => setShowDesignPanel(true)} />
           <LightHeaderBtn
             icon={noApiKey ? <KeyRound className="h-3.5 w-3.5" /> : <Settings className="h-3.5 w-3.5" />}
             label={noApiKey ? 'Add Key' : 'Settings'}
             onClick={() => setShowSettings(true)}
             warn={noApiKey}
-          />
-          <LightHeaderBtn
-            icon={showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            label={showPreview ? 'Hide' : 'Preview'}
-            onClick={() => setShowPreview(p => !p)}
-            active={showPreview}
           />
         </div>
       </header>
@@ -210,11 +205,8 @@ export default function BuilderPage() {
       {/* ── Main body ───────────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Form panel */}
-        <main className={cn(
-          'flex flex-col overflow-y-auto transition-all duration-300',
-          showPreview ? 'w-full lg:w-1/2' : 'w-full max-w-2xl mx-auto'
-        )}>
+        {/* Form panel — full width, centered */}
+        <main className="flex flex-col overflow-y-auto w-full max-w-2xl mx-auto">
           <div className="flex-1 px-6 py-8 space-y-6">
             {/* Step header */}
             <div key={`header-${step}`} className="animate-fade-in">
@@ -276,17 +268,71 @@ export default function BuilderPage() {
               </div>
             )}
 
-            {/* ── Steps 2-6: Form steps wrapped in card ────────────────── */}
-            {step >= 2 && step <= 6 && (
+            {/* ── Steps 1-5: Form steps wrapped in card ────────────────── */}
+            {step >= 1 && step <= 5 && (
               <div
                 key={`step-${step}`}
                 className="animate-slide-up-sm rounded-2xl p-5 bg-white border border-gray-100 shadow-sm"
               >
-                {step === 2 && <PersonalInfoForm />}
-                {step === 3 && <WorkExperienceForm />}
-                {step === 4 && <EducationForm />}
-                {step === 5 && <SkillsForm />}
-                {step === 6 && <SummaryForm />}
+                {step === 1 && <PersonalInfoForm />}
+                {step === 2 && <WorkExperienceForm />}
+                {step === 3 && <EducationForm />}
+                {step === 4 && <SkillsForm />}
+                {step === 5 && <SummaryForm />}
+              </div>
+            )}
+
+            {/* ── Step 6: Design / Template selection ─────────────────────── */}
+            {step === 6 && (
+              <div key="step-6" className="animate-slide-up-sm space-y-4">
+                {/* Live preview of current choice */}
+                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                      <Eye className="h-4 w-4 text-purple-500" />
+                      Preview — <span className="brand-gradient-text">{currentTemplate.name}</span>
+                    </p>
+                    <span className="text-xs text-gray-400">This is how your resume will look</span>
+                  </div>
+                  <div id="resume-preview-target" className="bg-gray-50 p-3">
+                    <div className="max-w-2xl mx-auto shadow-lg rounded-lg overflow-hidden">
+                      <ResumePreviewPanel sections={sections} templateName={currentTemplate.name} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Template grid */}
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Choose a Template</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {TEMPLATES.map(t => {
+                      const isSelected = t.id === templateId || (!templateId && t.id === TEMPLATES[0].id)
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => setTemplate(t.id, t.name)}
+                          className={cn(
+                            'group relative rounded-xl border-2 overflow-hidden text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
+                            isSelected ? 'border-purple-500' : 'border-gray-200 hover:border-purple-300'
+                          )}
+                          style={isSelected ? { boxShadow: '0 0 20px rgba(168,85,247,0.25)' } : {}}
+                        >
+                          <TemplateThumbnail template={t} />
+                          <div className="px-3 py-2 bg-gray-50">
+                            <p className="text-xs font-semibold truncate text-gray-800">{t.name}</p>
+                            <p className="text-[10px] capitalize text-gray-400">{t.category}</p>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-white"
+                              style={{ background: 'var(--melo-gradient)', boxShadow: '0 0 8px rgba(168,85,247,0.6)' }}>
+                              <Check className="h-3 w-3" />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -329,75 +375,7 @@ export default function BuilderPage() {
           )}
         </main>
 
-        {/* Live preview panel */}
-        {showPreview && (
-          <aside className="hidden lg:flex w-1/2 overflow-y-auto items-start justify-center p-6 bg-gray-100 border-l border-gray-200">
-            <div className="w-full max-w-150">
-              <p className="text-xs text-center mb-3 font-medium text-gray-400">
-                Live Preview ·{' '}
-                <span className="brand-gradient-text font-semibold">{currentTemplate.name}</span>
-              </p>
-              <div id="resume-preview-target" className="rounded-xl overflow-hidden shadow-2xl">
-                <ResumePreviewPanel sections={sections} templateName={currentTemplate.name} />
-              </div>
-            </div>
-          </aside>
-        )}
       </div>
-
-      {/* ── Design Panel ────────────────────────────────────────────────────── */}
-      {showDesignPanel && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 backdrop-blur-sm bg-black/30" onClick={() => setShowDesignPanel(false)} />
-          <div className="w-full max-w-sm flex flex-col bg-white border-l border-gray-200 shadow-2xl animate-slide-up-sm">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg flex items-center justify-center text-white" style={{ background: 'var(--melo-gradient)' }}>
-                  <Layout className="h-3.5 w-3.5" />
-                </div>
-                <h2 className="font-semibold text-gray-900">Choose Design</h2>
-              </div>
-              <button onClick={() => setShowDesignPanel(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <p className="text-xs text-gray-400 mb-4">
-                Pick a template — switch any time, even after writing your resume.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {TEMPLATES.map(t => {
-                  const isSelected = t.id === templateId || (!templateId && t.id === TEMPLATES[0].id)
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => { setTemplate(t.id, t.name); setShowDesignPanel(false) }}
-                      className={cn(
-                        'group relative rounded-xl border-2 overflow-hidden text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
-                        isSelected ? 'border-purple-500' : 'border-gray-200 hover:border-purple-300'
-                      )}
-                      style={isSelected ? { boxShadow: '0 0 16px rgba(168,85,247,0.3)' } : {}}
-                    >
-                      <TemplateThumbnail template={t} />
-                      <div className="px-2.5 py-2 bg-gray-50">
-                        <p className="text-xs font-semibold truncate text-gray-800">{t.name}</p>
-                        <p className="text-[10px] capitalize text-gray-400">{t.category}</p>
-                      </div>
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-white"
-                          style={{ background: 'var(--melo-gradient)', boxShadow: '0 0 8px rgba(168,85,247,0.5)' }}>
-                          <Check className="h-3 w-3" />
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Settings drawer ─────────────────────────────────────────────────── */}
       {showSettings && (
@@ -557,12 +535,18 @@ function DoneStep({
       {/* Full resume preview */}
       <div>
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] mb-3 flex items-center gap-1.5 text-gray-400">
-          <Eye className="h-3.5 w-3.5" /> Full Preview ·{' '}
+          <Eye className="h-3.5 w-3.5" /> Your Resume ·{' '}
           <span className="brand-gradient-text">{templateName}</span>
         </p>
+        {/* Visible preview */}
+        <div className="rounded-xl overflow-hidden shadow-2xl border border-gray-100">
+          <ResumePreviewPanel sections={sections} templateName={templateName} />
+        </div>
+        {/* Hidden export target — no rounded corners / shadows so html2canvas gets clean output */}
         <div
-          id="resume-preview-target"
-          className="rounded-xl overflow-hidden shadow-2xl border border-gray-100"
+          id="resume-export-canvas"
+          style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', background: '#fff', zIndex: -1 }}
+          aria-hidden="true"
         >
           <ResumePreviewPanel sections={sections} templateName={templateName} />
         </div>
@@ -647,7 +631,7 @@ function JobTargetStep({
   return (
     <div className="space-y-6">
       {/* Intro card */}
-      <div className="rounded-2xl p-5 flex items-start gap-3 border"
+      <div className="rounded-2xl p-4 flex items-start gap-3 border"
         style={{ background: 'var(--melo-gradient-soft)', borderColor: 'rgba(244,114,182,0.3)' }}>
         <div className="rounded-xl p-2 shrink-0 text-white" style={{ background: 'var(--melo-gradient)' }}>
           <Sparkles className="h-5 w-5" />
@@ -655,14 +639,39 @@ function JobTargetStep({
         <div>
           <h3 className="font-semibold text-sm text-gray-900">AI-Powered Resume Builder</h3>
           <p className="text-xs mt-1 leading-relaxed text-gray-500">
-            Tell us your target job and location. Melo's AI will tailor your entire resume —
-            summaries, bullet points, and skills — specifically for that role and market.
+            Tell us where you're based and the job you want. Melo's AI tailors every section
+            — summaries, bullets, and skills — for your exact role and market.
           </p>
         </div>
       </div>
 
-      {/* Job title */}
-      <div className="space-y-2">
+      {/* ── Location FIRST ── */}
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
+        <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+          <MapPin className="h-4 w-4 text-purple-500" />
+          Where are you based?
+          <span className="font-normal text-gray-400 text-xs ml-1">helps AI match local market</span>
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="text"
+            value={city}
+            placeholder="City (e.g. Metro Manila)"
+            onChange={e => onLocationChange(e.target.value, country)}
+            className="w-full rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+          />
+          <input
+            type="text"
+            value={country}
+            placeholder="Country (e.g. Philippines)"
+            onChange={e => onLocationChange(city, e.target.value)}
+            className="w-full rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+          />
+        </div>
+      </div>
+
+      {/* ── Job title ── */}
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
         <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
           <Target className="h-4 w-4 text-purple-500" />
           What job are you applying for? *
@@ -677,9 +686,8 @@ function JobTargetStep({
             onChange={e => { setJobQuery(e.target.value); onJobChange(e.target.value); setShowSuggestions(true) }}
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            className="w-full rounded-xl pl-9 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+            className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
           />
-
           {showSuggestions && suggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl shadow-xl bg-white border border-gray-200">
               {suggestions.map(title => (
@@ -705,46 +713,18 @@ function JobTargetStep({
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-400">Type any job — from barista to CEO. Or pick from the list.</p>
+        <p className="text-xs text-gray-400">From barista to CEO — type anything or pick from the list.</p>
       </div>
 
-      {/* Location */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-          <MapPin className="h-4 w-4 text-purple-500" />
-          Where are you based?{' '}
-          <span className="font-normal text-gray-400">(optional)</span>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { value: city, placeholder: 'City (e.g. Metro Manila)', onChange: (v: string) => onLocationChange(v, country) },
-            { value: country, placeholder: 'Country (e.g. Philippines)', onChange: (v: string) => onLocationChange(city, v) },
-          ].map((f, i) => (
-            <input
-              key={i}
-              type="text"
-              value={f.value}
-              placeholder={f.placeholder}
-              onChange={e => f.onChange(e.target.value)}
-              className="w-full rounded-xl px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
-            />
-          ))}
-        </div>
-        <p className="text-xs text-gray-400">Helps AI tailor your resume for your local job market.</p>
-      </div>
-
-      {/* Preview of what AI will do */}
+      {/* What AI will do */}
       {jobTitle && (
-        <div className="rounded-2xl p-4 space-y-3 bg-white border border-gray-100 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400">
-            AI will help you with
-          </p>
-          <ul className="space-y-2">
+        <div className="rounded-2xl p-4 space-y-2 bg-white border border-gray-100 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">AI will tailor</p>
+          <ul className="space-y-1.5">
             {[
-              `Write a professional summary for ${jobTitle}`,
-              `Suggest the best skills for ${jobTitle} ATS matching`,
-              `Craft bullet points that match ${jobTitle} expectations`,
-              `Generate cover letters for ${jobTitle} positions`,
+              `Professional summary for ${jobTitle}`,
+              `Skills ranked by ${jobTitle} ATS relevance`,
+              `Bullet points matching ${jobTitle} expectations`,
             ].map(item => (
               <li key={item} className="flex items-start gap-2 text-sm">
                 <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />

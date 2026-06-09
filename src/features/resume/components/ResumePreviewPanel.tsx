@@ -36,26 +36,33 @@ function sectionsToResumeData(sections: Section[]): ResumeData {
 }
 
 // Template registry — maps template name slug → component
+// Keys must match TEMPLATES[].name.toLowerCase() from BuilderPage
 const TEMPLATE_MAP: Record<string, React.ComponentType<{ data: ResumeData }>> = {
+  // Academic variants
   harvard:          HarvardTemplate,
-  stanford:         HarvardTemplate, // variant
+  stanford:         HarvardTemplate,
   oxford:           HarvardTemplate,
   mit:              HarvardTemplate,
+  academic:         HarvardTemplate,
+  // Minimal variants
   minimal:          MinimalTemplate,
   clean:            MinimalTemplate,
-  elegant:          ModernTemplate,
-  professional:     ModernTemplate,
+  internship:       MinimalTemplate,
+  'fresh graduate': MinimalTemplate,
+  'fresh grad':     MinimalTemplate,
+  // Executive/corporate variants
   executive:        ExecutiveTemplate,
   business:         ExecutiveTemplate,
   finance:          ExecutiveTemplate,
+  // Modern variants (all others)
+  modern:           ModernTemplate,
+  elegant:          ModernTemplate,
+  professional:     ModernTemplate,
   marketing:        ModernTemplate,
   multimedia:       ModernTemplate,
   designer:         ModernTemplate,
-  internship:       MinimalTemplate,
-  'fresh graduate': MinimalTemplate,
-  academic:         HarvardTemplate,
-  'software developer': ModernTemplate,
   engineer:         ModernTemplate,
+  'software dev':   ModernTemplate,
   'data analyst':   ModernTemplate,
 }
 

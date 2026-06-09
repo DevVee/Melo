@@ -27,8 +27,8 @@ export function ExecutiveTemplate({ data }: Props) {
         />
         <div className="relative">
           <h1
-            className="text-[30px] font-light tracking-[0.06em] uppercase text-white leading-none"
-            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            className="text-[30px] font-bold tracking-[0.04em] uppercase text-white leading-none"
+            style={{ fontFamily: "'Poppins', 'Roboto', Arial, sans-serif" }}
           >
             {fullName || 'Your Name'}
           </h1>
