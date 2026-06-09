@@ -104,7 +104,7 @@ async function captureElement(element: HTMLElement): Promise<string> {
     opacity:       '1',
   })
 
-  await waitFrames(3)
+  await waitFrames(6)
 
   // Re-measure after reflow (may have grown due to minHeight)
   const captureH = Math.max(naturalH, element.scrollHeight || A4_H_PX)

@@ -27,15 +27,50 @@ async function resizeImage(file: File, maxSize = 300): Promise<string> {
 
 // ─── Reverse-geocode using BigDataCloud (free, no key) ──────────────────────
 
-async function reverseGeocode(lat: number, lng: number): Promise<{ city: string; country: string }> {
+interface BDCResponse {
+  city?: string
+  locality?: string
+  principalSubdivision?: string
+  countryName?: string
+  localityInfo?: {
+    administrative?: Array<{ name: string; order: number; adminLevel?: number }>
+  }
+}
+
+/** Strip ISO "(the)" suffixes: "Philippines (the)" → "Philippines" */
+function cleanCountryName(raw: string): string {
+  return raw.replace(/\s*\(the\b[^)]*\)\s*$/i, '').trim()
+}
+
+async function reverseGeocode(
+  lat: number, lng: number
+): Promise<{ city: string; country: string; address: string }> {
   const res  = await fetch(
     `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
   )
-  const data = await res.json() as { city?: string; locality?: string; principalSubdivision?: string; countryName?: string }
-  return {
-    city:    data.city || data.locality || data.principalSubdivision || '',
-    country: data.countryName || '',
+  const data = await res.json() as BDCResponse
+
+  // Country: strip "(the)" suffix — e.g. "Philippines (the)" → "Philippines"
+  const country = cleanCountryName(data.countryName || '')
+
+  // City field: "Locality, Province" — e.g. "Balayan, Batangas"
+  const locality = data.locality || data.city || ''
+  const province = data.principalSubdivision || ''
+  const city = [locality, province].filter(Boolean).join(', ')
+
+  // Barangay / street: pick the most granular admin level from localityInfo
+  let address = ''
+  const admins = data.localityInfo?.administrative
+  if (admins && admins.length > 0) {
+    const sorted = [...admins].sort((a, b) => b.order - a.order)
+    // Find a granular entry (order ≥ 7) that isn't the same as locality
+    const barangay = sorted.find(
+      a => a.order >= 7 && a.name && a.name !== locality
+    )
+    if (barangay) address = barangay.name
   }
+
+  return { city, country, address }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -66,9 +101,10 @@ export function PersonalInfoForm() {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
       )
-      const { city, country } = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
+      const { city, country, address } = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
       if (city)    update({ city })
       if (country) update({ country })
+      if (address) update({ address })
     } catch {
       /* user denied or error — fail silently */
     } finally {
@@ -169,9 +205,9 @@ export function PersonalInfoForm() {
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {field('city',    'City',           'Manila'     )}
-          {field('country', 'Country',        'Philippines')}
-          {field('address', 'Street Address', 'Quezon City')}
+          {field('city',    'City / Province',    'e.g. Balayan, Batangas'   )}
+          {field('country', 'Country',            'e.g. Philippines'         )}
+          {field('address', 'Barangay / Street',  'e.g. Barangay San Lorenzo')}
         </div>
       </div>
 

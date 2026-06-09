@@ -533,10 +533,11 @@ function DoneStep({
         <div className="rounded-xl overflow-hidden shadow-2xl border border-gray-100">
           <ScaledResumePreview sections={sections} templateName={templateName} />
         </div>
-        {/* Hidden export target — position: fixed behind page content, captureElement() moves it into viewport */}
+        {/* Hidden export target — off-screen left so browser still paints it fully.
+            captureElement() moves it to top:0 left:0 for capture then restores. */}
         <div
           id="resume-export-canvas"
-          style={{ position: 'fixed', top: 0, left: 0, width: '794px', background: '#fff', zIndex: -999, pointerEvents: 'none' }}
+          style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', background: '#fff', pointerEvents: 'none' }}
           aria-hidden="true"
         >
           <ResumePreviewPanel sections={sections} templateName={templateName} />
@@ -596,10 +597,13 @@ async function reverseGeocodeJob(lat: number, lng: number): Promise<{ city: stri
     `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
   )
   const data = await res.json() as { city?: string; locality?: string; principalSubdivision?: string; countryName?: string }
-  return {
-    city:    data.city || data.locality || data.principalSubdivision || '',
-    country: data.countryName || '',
-  }
+  // Strip ISO "(the)" suffix: "Philippines (the)" → "Philippines"
+  const country  = (data.countryName || '').replace(/\s*\(the\b[^)]*\)\s*$/i, '').trim()
+  // Format: "Locality, Province" → e.g. "Balayan, Batangas"
+  const locality = data.locality || data.city || ''
+  const province = data.principalSubdivision || ''
+  const city     = [locality, province].filter(Boolean).join(', ')
+  return { city, country }
 }
 
 function JobTargetStep({
