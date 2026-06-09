@@ -119,7 +119,7 @@ export function PersonalInfoForm() {
       </div>
 
       {/* Name */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {field('firstName', 'First Name *', 'Juan')}
         {field('lastName', 'Last Name *', 'dela Cruz')}
       </div>
@@ -148,20 +148,20 @@ export function PersonalInfoForm() {
       </div>
 
       {/* Contact */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {field('email', 'Email', 'juan@example.com', 'email')}
         {field('phone', 'Phone', '+63 912 345 6789', 'tel')}
       </div>
 
       {/* Location */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {field('city', 'City', 'Manila')}
         {field('country', 'Country', 'Philippines')}
         {field('address', 'Street Address', 'Quezon City')}
       </div>
 
       {/* Online presence */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {field('linkedin', 'LinkedIn URL', 'https://linkedin.com/in/…', 'url')}
         {field('website', 'Portfolio / Website', 'https://yoursite.com', 'url')}
       </div>

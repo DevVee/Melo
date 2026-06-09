@@ -41,7 +41,7 @@ export function ProjectsForm({ section }: Props) {
           </div>
           {expanded === entry.id && (
             <div className="border-t border-border p-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Project Name *</Label><Input value={entry.name} onChange={e => update(entry.id, 'name', e.target.value)} placeholder="Portfolio Website" /></div>
                 <div className="space-y-1"><Label className="text-xs">Your Role</Label><Input value={entry.role ?? ''} onChange={e => update(entry.id, 'role', e.target.value)} placeholder="Full Stack Developer" /></div>
               </div>
@@ -58,7 +58,7 @@ export function ProjectsForm({ section }: Props) {
                 <Textarea value={entry.description} onChange={e => update(entry.id, 'description', e.target.value)} placeholder="Describe what the project does and your contribution…" />
               </div>
               <div className="space-y-1"><Label className="text-xs">Technologies</Label><Input value={entry.technologies.join(', ')} onChange={e => update(entry.id, 'technologies', e.target.value.split(',').map(t => t.trim()).filter(Boolean))} placeholder="React, TypeScript, Supabase" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Project URL</Label><Input value={entry.project_url ?? ''} onChange={e => update(entry.id, 'project_url', e.target.value)} placeholder="https://…" /></div>
                 <div className="space-y-1"><Label className="text-xs">GitHub URL</Label><Input value={entry.github_url ?? ''} onChange={e => update(entry.id, 'github_url', e.target.value)} placeholder="https://github.com/…" /></div>
               </div>

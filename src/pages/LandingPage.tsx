@@ -31,8 +31,8 @@ const FEATURES = [
   },
   {
     icon: Download,
-    title: 'Export PDF, DOCX & PNG',
-    desc: 'Download in any format. Print-ready formatting, recruiter-ready output, ATS-safe structure.',
+    title: 'Export PDF & PNG',
+    desc: 'Download as PDF or image. Print-ready formatting, recruiter-ready output, ATS-safe structure.',
     from: '#fff7f0', to: '#fef2f2', border: '#fca5a5', iconColor: '#ef4444',
   },
   {
@@ -47,7 +47,7 @@ const STEPS = [
   { n: '1', title: 'Pick Your Target Job',   desc: 'Tell AI what role you want — it shapes everything from bullet points to skills.' },
   { n: '2', title: 'Choose a Template',       desc: '20+ professionally designed layouts. Switch any time, even after writing.' },
   { n: '3', title: 'Fill In with AI Help',    desc: 'Every section has one-click AI assist. Write, improve, or get suggestions instantly.' },
-  { n: '4', title: 'Download & Apply',         desc: 'Export as PDF, DOCX, or image — ATS-ready, recruiter-approved.' },
+  { n: '4', title: 'Download & Apply',         desc: 'Export as PDF or image — ATS-ready, recruiter-approved.' },
 ]
 
 const TEMPLATE_SAMPLES = [
@@ -127,7 +127,7 @@ export default function LandingPage() {
 
           {/* Feature pills */}
           <div className="animate-fade-in delay-500 mt-12 flex flex-wrap items-center justify-center gap-2.5">
-            {['PDF Export', 'Word Export', 'Image Export', 'ATS Optimizer', 'AI Writing', 'Cover Letter', '20 Templates'].map(f => (
+            {['PDF Export', 'Image Export', 'ATS Optimizer', 'AI Writing', 'Cover Letter', '20 Templates'].map(f => (
               <span key={f}
                 className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-500 font-medium">
                 <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
@@ -219,7 +219,7 @@ export default function LandingPage() {
             <Award className="h-10 w-10 text-white/80 mx-auto mb-4" />
             <h2 className="text-3xl font-extrabold mb-3">Your next job starts with a great resume</h2>
             <p className="text-white/70 mb-8 text-sm leading-relaxed">
-              Build for free, no account needed. Download PDF, Word, or image instantly.
+              Build for free, no account needed. Download PDF or image instantly.
             </p>
             <button
               onClick={() => navigate('/build')}
@@ -245,7 +245,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5" />
-              PDF · DOCX · PNG
+              PDF · PNG
             </span>
             <span className="flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5" />

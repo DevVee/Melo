@@ -116,7 +116,7 @@ function ExperienceEntry({
       {isExpanded && (
         <div className="border-t border-border px-4 pb-4 pt-3 space-y-4">
           {/* Position + Company */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Position / Job Title *</Label>
               <Input
@@ -136,7 +136,7 @@ function ExperienceEntry({
           </div>
 
           {/* Type + Location */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Employment Type</Label>
               <Select value={entry.employmentType} onValueChange={v => updateEntry(entryId, { employmentType: v })}>
@@ -157,7 +157,7 @@ function ExperienceEntry({
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-3 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
             <div className="space-y-1">
               <Label className="text-xs">Start Date</Label>
               <Input type="month" value={entry.startDate} onChange={e => updateEntry(entryId, { startDate: e.target.value })} />

@@ -30,11 +30,11 @@ export function CertificationsForm({ section }: Props) {
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Certification Name *</Label><Input value={entry.name} onChange={e => update(entry.id, 'name', e.target.value)} placeholder="AWS Solutions Architect" /></div>
             <div className="space-y-1"><Label className="text-xs">Issuing Organization</Label><Input value={entry.issuing_organization} onChange={e => update(entry.id, 'issuing_organization', e.target.value)} placeholder="Amazon Web Services" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Issue Date</Label><Input type="month" value={entry.issue_date} onChange={e => update(entry.id, 'issue_date', e.target.value)} /></div>
             <div className="space-y-1"><Label className="text-xs">Expiration Date</Label><Input type="month" value={entry.expiration_date ?? ''} onChange={e => update(entry.id, 'expiration_date', e.target.value)} /></div>
           </div>

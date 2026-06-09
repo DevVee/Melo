@@ -138,7 +138,6 @@ export default function BuilderPage() {
   }
 
   const currentStepDef = STEPS[step]
-  const noApiKey = !groqApiKey && !import.meta.env.VITE_GROQ_API_KEY
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -181,27 +180,12 @@ export default function BuilderPage() {
         {/* Right actions */}
         <div className="flex items-center gap-1">
           <LightHeaderBtn
-            icon={noApiKey ? <KeyRound className="h-3.5 w-3.5" /> : <Settings className="h-3.5 w-3.5" />}
-            label={noApiKey ? 'Add Key' : 'Settings'}
+            icon={<Settings className="h-3.5 w-3.5" />}
+            label="Settings"
             onClick={() => setShowSettings(true)}
-            warn={noApiKey}
           />
         </div>
       </header>
-
-      {/* ── API key warning banner ──────────────────────────────────────────── */}
-      {noApiKey && (
-        <div className="flex items-center gap-2 bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800">
-          <KeyRound className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-          <span>
-            <strong>AI features need a Groq API key.</strong>{' '}It's free —{' '}
-            <a href="https://console.groq.com" target="_blank" rel="noreferrer" className="underline font-semibold">
-              get one at console.groq.com
-            </a>{' '}
-            then click Settings above.
-          </span>
-        </div>
-      )}
 
       {/* ── Main body ───────────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
@@ -351,49 +335,49 @@ export default function BuilderPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-6">
-              {/* Groq API Key */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-purple-500" />
-                  AI Engine (Groq)
-                </h3>
 
-                {import.meta.env.VITE_GROQ_API_KEY ? (
-                  <div className="rounded-xl p-3.5 bg-emerald-50 border border-emerald-200">
-                    <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
-                      <Check className="h-3.5 w-3.5" /> AI features are active
-                    </p>
-                    <p className="text-xs mt-1 text-gray-500">
-                      Powered by Groq · llama-3.3-70b-versatile
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs text-gray-500">
-                      Paste your Groq key to enable AI. Stays in your browser only.
-                    </p>
-                    <input
-                      type="password"
-                      value={groqApiKey}
-                      onChange={e => setGroqApiKey(e.target.value)}
-                      placeholder="gsk_…"
-                      className="w-full rounded-xl px-3 py-2.5 text-sm font-mono text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    {groqApiKey ? (
-                      <p className="text-xs text-emerald-600 flex items-center gap-1">
-                        <Check className="h-3.5 w-3.5" /> Key saved — AI features active
-                      </p>
-                    ) : (
-                      <a href="https://console.groq.com" target="_blank" rel="noreferrer"
-                        className="text-xs text-purple-600 underline">
-                        Get your free key at console.groq.com →
-                      </a>
-                    )}
-                  </>
-                )}
+              {/* AI status — always on via server proxy */}
+              <div className="rounded-xl p-3.5 bg-emerald-50 border border-emerald-200">
+                <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5" /> AI features are active for all users
+                </p>
+                <p className="text-xs mt-1 text-gray-500">
+                  Powered by Groq · llama-3.3-70b-versatile — no setup needed
+                </p>
               </div>
+
+              {/* Advanced: own key (higher rate limits) */}
+              <details className="group">
+                <summary className="cursor-pointer text-xs font-semibold text-gray-500 flex items-center gap-1.5 list-none select-none hover:text-gray-700 transition-colors">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Advanced — use your own Groq key
+                  <span className="ml-auto text-[10px] text-gray-400 group-open:hidden">▼</span>
+                  <span className="ml-auto text-[10px] text-gray-400 hidden group-open:inline">▲</span>
+                </summary>
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-gray-400">
+                    Optional. Your own key has higher rate limits. Stored in your browser only.
+                  </p>
+                  <input
+                    type="password"
+                    value={groqApiKey}
+                    onChange={e => setGroqApiKey(e.target.value)}
+                    placeholder="gsk_…"
+                    className="w-full rounded-xl px-3 py-2.5 text-sm font-mono text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {groqApiKey && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <Check className="h-3.5 w-3.5" /> Using your own key
+                    </p>
+                  )}
+                  <a href="https://console.groq.com" target="_blank" rel="noreferrer"
+                    className="text-xs text-purple-600 underline">
+                    Get a free key at console.groq.com →
+                  </a>
+                </div>
+              </details>
 
               {/* Divider */}
               <div className="border-t border-gray-100" />
@@ -653,7 +637,7 @@ function JobTargetStep({
           Where are you based?
           <span className="font-normal text-gray-400 text-xs ml-1">helps AI match local market</span>
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
           <input
             type="text"
             value={city}
