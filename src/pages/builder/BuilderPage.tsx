@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useBuilderStore, storeToSections } from '@/store/builder.store'
 import { ResumePreviewPanel } from '@/features/resume/components/ResumePreviewPanel'
+import { ScaledResumePreview } from '@/features/resume/components/ScaledResumePreview'
 import { PersonalInfoForm } from '@/features/resume/components/forms/PersonalInfoForm'
 import { SummaryForm } from '@/features/resume/components/forms/SummaryForm'
 import { WorkExperienceForm } from '@/features/resume/components/forms/WorkExperienceForm'
@@ -62,9 +63,10 @@ export default function BuilderPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const stepParam = parseInt(searchParams.get('step') ?? '0', 10)
   const [step, setStepRaw] = useState(isNaN(stepParam) ? 0 : Math.min(stepParam, STEPS.length - 1))
-  const [showSettings, setShowSettings] = useState(false)
-  const [exporting, setExporting]       = useState(false)
-  const [exportType, setExportType]     = useState<'pdf' | 'docx' | 'png' | null>(null)
+  const [showSettings, setShowSettings]     = useState(false)
+  const [showTemplatePanel, setShowTemplatePanel] = useState(false)
+  const [exporting, setExporting]           = useState(false)
+  const [exportType, setExportType]         = useState<'pdf' | 'docx' | 'png' | null>(null)
 
   // Store
   const templateId       = useBuilderStore(s => s.templateId)
@@ -236,38 +238,6 @@ export default function BuilderPage() {
               />
             )}
 
-            {/* ── Step 1: Template ──────────────────────────────────────────── */}
-            {step === 1 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {TEMPLATES.map(t => {
-                  const isSelected = t.id === templateId || (!templateId && t.id === TEMPLATES[0].id)
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setTemplate(t.id, t.name)}
-                      className={cn(
-                        'group relative rounded-xl border-2 overflow-hidden text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
-                        isSelected ? 'border-purple-500' : 'border-gray-200 hover:border-purple-300'
-                      )}
-                      style={isSelected ? { boxShadow: '0 0 20px rgba(168,85,247,0.25)' } : {}}
-                    >
-                      <TemplateThumbnail template={t} />
-                      <div className="px-3 py-2 bg-gray-50">
-                        <p className="text-xs font-semibold truncate text-gray-800">{t.name}</p>
-                        <p className="text-[10px] capitalize text-gray-400">{t.category}</p>
-                      </div>
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-white"
-                          style={{ background: 'var(--melo-gradient)', boxShadow: '0 0 8px rgba(168,85,247,0.6)' }}>
-                          <Check className="h-3 w-3" />
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
             {/* ── Steps 1-5: Form steps wrapped in card ────────────────── */}
             {step >= 1 && step <= 5 && (
               <div
@@ -295,43 +265,28 @@ export default function BuilderPage() {
                     <span className="text-xs text-gray-400">This is how your resume will look</span>
                   </div>
                   <div id="resume-preview-target" className="bg-gray-50 p-3">
-                    <div className="max-w-2xl mx-auto shadow-lg rounded-lg overflow-hidden">
-                      <ResumePreviewPanel sections={sections} templateName={currentTemplate.name} />
+                    <div className="shadow-lg rounded-lg overflow-hidden">
+                      <ScaledResumePreview sections={sections} templateName={currentTemplate.name} />
                     </div>
                   </div>
                 </div>
 
-                {/* Template grid */}
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Choose a Template</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {TEMPLATES.map(t => {
-                      const isSelected = t.id === templateId || (!templateId && t.id === TEMPLATES[0].id)
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => setTemplate(t.id, t.name)}
-                          className={cn(
-                            'group relative rounded-xl border-2 overflow-hidden text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
-                            isSelected ? 'border-purple-500' : 'border-gray-200 hover:border-purple-300'
-                          )}
-                          style={isSelected ? { boxShadow: '0 0 20px rgba(168,85,247,0.25)' } : {}}
-                        >
-                          <TemplateThumbnail template={t} />
-                          <div className="px-3 py-2 bg-gray-50">
-                            <p className="text-xs font-semibold truncate text-gray-800">{t.name}</p>
-                            <p className="text-[10px] capitalize text-gray-400">{t.category}</p>
-                          </div>
-                          {isSelected && (
-                            <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-white"
-                              style={{ background: 'var(--melo-gradient)', boxShadow: '0 0 8px rgba(168,85,247,0.6)' }}>
-                              <Check className="h-3 w-3" />
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })}
+                {/* Change template CTA */}
+                <div className="flex items-center justify-between rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      Current: <span className="brand-gradient-text">{currentTemplate.name}</span>
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">{currentTemplate.category} · switch any time</p>
                   </div>
+                  <button
+                    onClick={() => setShowTemplatePanel(true)}
+                    className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
+                    style={{ background: 'var(--melo-gradient)' }}
+                  >
+                    <Layout className="h-4 w-4" />
+                    Change Template
+                  </button>
                 </div>
               </div>
             )}
@@ -467,6 +422,58 @@ export default function BuilderPage() {
           </div>
         </div>
       )}
+
+      {/* ── Template side panel ─────────────────────────────────────────────── */}
+      {showTemplatePanel && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 backdrop-blur-sm bg-black/30" onClick={() => setShowTemplatePanel(false)} />
+          <div className="w-full max-w-sm flex flex-col bg-white border-l border-gray-200 shadow-2xl animate-slide-up-sm">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg flex items-center justify-center text-white" style={{ background: 'var(--melo-gradient)' }}>
+                  <Layout className="h-3.5 w-3.5" />
+                </div>
+                <h2 className="font-semibold text-gray-900">Choose Template</h2>
+              </div>
+              <button onClick={() => setShowTemplatePanel(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <p className="text-xs text-gray-400 mb-3">Click a template to preview it on the left.</p>
+              <div className="grid grid-cols-2 gap-3">
+                {TEMPLATES.map(t => {
+                  const isSelected = t.id === templateId || (!templateId && t.id === TEMPLATES[0].id)
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => { setTemplate(t.id, t.name); setShowTemplatePanel(false) }}
+                      className={cn(
+                        'group relative rounded-xl border-2 overflow-hidden text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]',
+                        isSelected ? 'border-purple-500' : 'border-gray-200 hover:border-purple-300'
+                      )}
+                      style={isSelected ? { boxShadow: '0 0 16px rgba(168,85,247,0.3)' } : {}}
+                    >
+                      <TemplateThumbnail template={t} />
+                      <div className="px-2.5 py-2 bg-gray-50">
+                        <p className="text-xs font-semibold truncate text-gray-800">{t.name}</p>
+                        <p className="text-[10px] capitalize text-gray-400">{t.category}</p>
+                      </div>
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-white"
+                          style={{ background: 'var(--melo-gradient)', boxShadow: '0 0 8px rgba(168,85,247,0.5)' }}>
+                          <Check className="h-3 w-3" />
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -538,14 +545,14 @@ function DoneStep({
           <Eye className="h-3.5 w-3.5" /> Your Resume ·{' '}
           <span className="brand-gradient-text">{templateName}</span>
         </p>
-        {/* Visible preview */}
+        {/* Visible preview — always exact A4 layout, scaled to fit screen */}
         <div className="rounded-xl overflow-hidden shadow-2xl border border-gray-100">
-          <ResumePreviewPanel sections={sections} templateName={templateName} />
+          <ScaledResumePreview sections={sections} templateName={templateName} />
         </div>
-        {/* Hidden export target — no rounded corners / shadows so html2canvas gets clean output */}
+        {/* Hidden export target — position: fixed behind page content, captureElement() moves it into viewport */}
         <div
           id="resume-export-canvas"
-          style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', background: '#fff', zIndex: -1 }}
+          style={{ position: 'fixed', top: 0, left: 0, width: '794px', background: '#fff', zIndex: -999, pointerEvents: 'none' }}
           aria-hidden="true"
         >
           <ResumePreviewPanel sections={sections} templateName={templateName} />

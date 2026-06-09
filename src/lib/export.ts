@@ -4,39 +4,70 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Bord
 
 /** Wait for fonts to load before capture */
 async function fontsReady(): Promise<void> {
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    await document.fonts.ready
-  }
+  try {
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await document.fonts.ready
+    }
+  } catch { /* non-critical */ }
+}
+
+/** Wait two animation frames for browser to paint */
+function waitFrames(n = 2): Promise<void> {
+  return new Promise(resolve => {
+    let count = 0
+    function tick() {
+      if (++count >= n) resolve()
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
 }
 
 /**
- * Capture an element to a high-res canvas.
- * Works around scroll offset, overflow-hidden clipping, and font loading.
+ * Capture an element to high-res canvas.
+ *
+ * Key insight: html2canvas only captures elements that the browser has PAINTED
+ * inside the visual viewport. We temporarily move the element to top:0, left:0
+ * behind the page (z-index:-999) so the browser renders it, then restore.
  */
 async function captureElement(element: HTMLElement): Promise<HTMLCanvasElement> {
   await fontsReady()
 
-  // Clone to a fixed off-screen div so overflow-hidden / rounded borders don't clip
-  const wrapper = document.createElement('div')
-  Object.assign(wrapper.style, {
+  // Save current inline styles we'll temporarily override
+  const saved = {
+    position: element.style.position,
+    top:      element.style.top,
+    left:     element.style.left,
+    right:    element.style.right,
+    bottom:   element.style.bottom,
+    zIndex:   element.style.zIndex,
+    width:    element.style.width,
+    borderRadius: element.style.borderRadius,
+    boxShadow:    element.style.boxShadow,
+    overflow:     element.style.overflow,
+    pointerEvents: element.style.pointerEvents,
+  }
+
+  // Move into viewport behind all page content
+  Object.assign(element.style, {
     position: 'fixed',
-    top: '0',
-    left: '-9999px',
-    width: '794px',       // A4 width at 96 DPI
-    background: 'white',
-    zIndex: '-1',
-    fontFamily: "'Poppins', 'Roboto', 'Inter', sans-serif",
+    top:      '0',
+    left:     '0',
+    right:    'auto',
+    bottom:   'auto',
+    zIndex:   '-999',
+    width:    '794px',          // A4 width @ 96 dpi
+    borderRadius: '0',
+    boxShadow:    'none',
+    overflow:     'visible',
+    pointerEvents: 'none',
   })
-  const clone = element.cloneNode(true) as HTMLElement
-  clone.style.borderRadius = '0'
-  clone.style.boxShadow = 'none'
-  clone.style.overflow = 'visible'
-  clone.style.width = '794px'
-  wrapper.appendChild(clone)
-  document.body.appendChild(wrapper)
+
+  // Let browser repaint with the new position
+  await waitFrames(3)
 
   try {
-    const canvas = await html2canvas(wrapper, {
+    const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
@@ -44,10 +75,13 @@ async function captureElement(element: HTMLElement): Promise<HTMLCanvasElement> 
       logging: false,
       width: 794,
       windowWidth: 794,
+      scrollX: 0,
+      scrollY: 0,
     })
     return canvas
   } finally {
-    document.body.removeChild(wrapper)
+    // Restore original styles
+    Object.assign(element.style, saved)
   }
 }
 

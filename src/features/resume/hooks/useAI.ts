@@ -29,9 +29,24 @@ function useJobCtx()   {
 
 // ─── Generate Professional Summary ───────────────────────────────────────────
 
+/** Calculate total years of experience from work entries */
+function calcYears(experience: WorkEntry[]): number {
+  let totalMonths = 0
+  const now = new Date()
+  for (const e of experience) {
+    const start = e.startDate ? new Date(e.startDate + '-01') : null
+    const end   = e.isCurrent ? now : e.endDate ? new Date(e.endDate + '-01') : null
+    if (start && end && end > start) {
+      totalMonths += (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    }
+  }
+  return Math.round(totalMonths / 12)
+}
+
 export function useGenerateSummary() {
   const key = useKey()
   const { targetJob, location } = useJobCtx()
+  const skills = useBuilderStore(s => s.skills)
 
   return useMutation({
     mutationFn: async ({
@@ -42,17 +57,34 @@ export function useGenerateSummary() {
       education: EducationEntry[]
       type?: 'summary' | 'objective'
     }) => {
-      const name = `${personal.firstName} ${personal.lastName}`.trim() || 'the candidate'
+      const name  = `${personal.firstName} ${personal.lastName}`.trim() || 'the candidate'
       const title = targetJob || personal.professionalTitle || ''
-      const recent = experience[0]
-      const edu = education[0]
+      const years = calcYears(experience)
+      const edu   = education[0]
+
+      // Build rich experience context from ALL entries
+      const expLines = experience.slice(0, 4).map(e => {
+        const start = e.startDate || ''
+        const end   = e.isCurrent ? 'Present' : (e.endDate || '')
+        const dates = [start, end].filter(Boolean).join(' – ')
+        return `  - ${e.position} at ${e.company}${dates ? ` (${dates})` : ''}`
+      }).join('\n')
+
+      const topSkills = skills.slice(0, 8).map(s => s.name).join(', ')
 
       const ctx = [
-        title && `Target role: ${title}`,
+        title    && `Target role: ${title}`,
         location && `Location: ${location}`,
-        recent && `Most recent role: ${recent.position} at ${recent.company}`,
-        edu && `Education: ${edu.degree} in ${edu.program} from ${edu.school}`,
+        years > 0 && `Total experience: ${years} year${years !== 1 ? 's' : ''}`,
+        expLines  && `Work history:\n${expLines}`,
+        edu       && `Education: ${edu.degree} in ${edu.program} from ${edu.school}`,
+        topSkills && `Key skills: ${topSkills}`,
       ].filter(Boolean).join('\n')
+
+      // Years label for prompt
+      const yearsLabel = years === 0 ? 'entry-level'
+                        : years === 1 ? '1 year'
+                        : `${years} years`
 
       const prompt = `Write a sharp 2-sentence professional summary for this resume.
 
@@ -61,19 +93,20 @@ ${ctx}
 
 Rules:
 - EXACTLY 2 sentences. No labels. No "Results:". No quotes. No markdown.
-- Sentence 1: Professional title + level/years + core expertise for "${title}"
-- Sentence 2: Key quantified achievement or unique value proposition${location ? ` relevant to ${location}` : ''}
-- Opening examples (pick a fresh, varied one): "${title} with X years…", "Seasoned ${title} who…", "Senior ${title} known for…", "Award-winning ${title} with…"
+- Sentence 1: Mention the ACTUAL job title and REAL years (${yearsLabel}) from the work history above — do NOT invent "5-10 years" if the data shows otherwise.
+- Sentence 2: Highlight a specific skill, achievement, or unique value from the experience above${location ? ` relevant to ${location} job market` : ''}.
+- Opening examples: "${title} with ${yearsLabel} of experience…", "Dedicated ${title} bringing ${yearsLabel}…", "Proven ${title} with ${yearsLabel}…"
 - BANNED openers: "Results-driven", "Dynamic", "Accomplished", "Passionate", "Driven", "Highly motivated", "Detail-oriented"
-- ATS keywords packed naturally — not stuffed
-- No first-person pronouns. Output the 2-sentence summary directly — no prefix, no label.`
+- NEVER invent years of experience — use exactly ${yearsLabel} as stated above.
+- ATS keywords from skills list packed naturally.
+- No first-person pronouns. Output directly — no label prefix.`
 
       return callGroq(
         [
           { role: 'system', content: RESUME_WRITER_SYSTEM },
           { role: 'user', content: prompt },
         ],
-        160,
+        180,
         GROQ_MODELS.FAST,
         key,
       )
