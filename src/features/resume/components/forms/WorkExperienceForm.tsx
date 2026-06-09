@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker'
 import { useBuilderStore } from '@/store/builder.store'
 import { useImproveBullets, useGenerateBulletsFromRole } from '@/features/resume/hooks/useAI'
 
@@ -160,15 +161,17 @@ function ExperienceEntry({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
             <div className="space-y-1">
               <Label className="text-xs">Start Date</Label>
-              <Input type="month" value={entry.startDate} onChange={e => updateEntry(entryId, { startDate: e.target.value })} />
+              <MonthYearPicker
+                value={entry.startDate}
+                onChange={val => updateEntry(entryId, { startDate: val })}
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">End Date</Label>
-              <Input
-                type="month"
+              <MonthYearPicker
                 value={entry.endDate}
                 disabled={entry.isCurrent}
-                onChange={e => updateEntry(entryId, { endDate: e.target.value })}
+                onChange={val => updateEntry(entryId, { endDate: val })}
               />
             </div>
             <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pb-2">

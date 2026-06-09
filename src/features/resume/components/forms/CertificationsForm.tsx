@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker'
 import { useUpdateSection } from '@/features/resume/hooks/useSections'
 import type { Certification } from '@/types'
 
@@ -35,8 +36,14 @@ export function CertificationsForm({ section }: Props) {
             <div className="space-y-1"><Label className="text-xs">Issuing Organization</Label><Input value={entry.issuing_organization} onChange={e => update(entry.id, 'issuing_organization', e.target.value)} placeholder="Amazon Web Services" /></div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1"><Label className="text-xs">Issue Date</Label><Input type="month" value={entry.issue_date} onChange={e => update(entry.id, 'issue_date', e.target.value)} /></div>
-            <div className="space-y-1"><Label className="text-xs">Expiration Date</Label><Input type="month" value={entry.expiration_date ?? ''} onChange={e => update(entry.id, 'expiration_date', e.target.value)} /></div>
+            <div className="space-y-1">
+              <Label className="text-xs">Issue Date</Label>
+              <MonthYearPicker value={entry.issue_date} onChange={val => update(entry.id, 'issue_date', val)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Expiration Date</Label>
+              <MonthYearPicker value={entry.expiration_date ?? ''} onChange={val => update(entry.id, 'expiration_date', val)} />
+            </div>
           </div>
           <div className="space-y-1"><Label className="text-xs">Credential URL</Label><Input value={entry.credential_url ?? ''} onChange={e => update(entry.id, 'credential_url', e.target.value)} placeholder="https://…" /></div>
         </div>
