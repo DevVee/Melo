@@ -70,13 +70,14 @@ export async function callGroq(
     res = await doFetch(GROQ_DIRECT, body, clientKey)
   } else {
     // Use server-side proxy (owner's key, works for all users)
-    res = await doFetch(GROQ_PROXY, body)
+    res = await doFetch(GROQ_PROXY, body).catch(() => {
+      // Proxy unreachable (e.g. local dev without Vercel CLI)
+      throw new Error('AI server unreachable. Open ⚙ Settings → paste your free Groq key from console.groq.com')
+    })
 
     if (res.status === 503) {
-      // Proxy key not configured — fall back to asking user
-      throw new Error(
-        'AI is not configured. Open ⚙ Settings and paste your free Groq key from console.groq.com'
-      )
+      // Proxy running but key not set in Vercel env vars
+      throw new Error('AI key not set on server. Ask the admin to add GROQ_API_KEY in Vercel, or open ⚙ Settings and paste your own free key from console.groq.com')
     }
   }
 

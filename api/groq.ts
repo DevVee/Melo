@@ -29,10 +29,11 @@ export default async function handler(request: Request): Promise<Response> {
     })
   }
 
-  const key = process.env.GROQ_API_KEY
+  // Accept either name — GROQ_API_KEY (server-only, secure) or VITE_GROQ_API_KEY
+  const key = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY
   if (!key) {
     return Response.json(
-      { error: 'GROQ_API_KEY is not set on the server.' },
+      { error: 'Groq API key not configured on server.' },
       { status: 503 }
     )
   }

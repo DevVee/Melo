@@ -1,10 +1,8 @@
-import { useRef } from 'react'
-import { Camera, X, Sparkles, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Camera, X, Sparkles, Loader2, MapPin, Navigation } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useBuilderStore } from '@/store/builder.store'
-import { useMutation } from '@tanstack/react-query'
-import { callGroq, GROQ_MODELS } from '@/lib/groq'
 
 // ─── Resize image to ≤300px, return base64 ─────────────────────────────────
 
@@ -27,34 +25,28 @@ async function resizeImage(file: File, maxSize = 300): Promise<string> {
   })
 }
 
+// ─── Reverse-geocode using BigDataCloud (free, no key) ──────────────────────
+
+async function reverseGeocode(lat: number, lng: number): Promise<{ city: string; country: string }> {
+  const res  = await fetch(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+  )
+  const data = await res.json() as { city?: string; locality?: string; principalSubdivision?: string; countryName?: string }
+  return {
+    city:    data.city || data.locality || data.principalSubdivision || '',
+    country: data.countryName || '',
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PersonalInfoForm() {
-  const personal       = useBuilderStore(s => s.personal)
-  const update         = useBuilderStore(s => s.updatePersonal)
-  const profilePhoto   = useBuilderStore(s => s.profilePhoto)
-  const setPhoto       = useBuilderStore(s => s.setProfilePhoto)
-  const targetJobTitle = useBuilderStore(s => s.targetJobTitle)
-  const groqApiKey     = useBuilderStore(s => s.groqApiKey)
-  const fileRef        = useRef<HTMLInputElement>(null)
-
-  // AI suggest professional title
-  const { mutate: suggestTitle, isPending: suggestingTitle } = useMutation({
-    mutationFn: async () => {
-      const ctx = [
-        targetJobTitle && `Target job: ${targetJobTitle}`,
-        personal.firstName && `Name: ${personal.firstName} ${personal.lastName}`,
-      ].filter(Boolean).join(', ')
-      return callGroq(
-        [
-          { role: 'system', content: 'You are a career expert. Suggest a punchy, professional resume headline/title. Output ONLY the title text, nothing else. Max 6 words.' },
-          { role: 'user', content: `Suggest a professional title for: ${ctx || 'general professional'}` },
-        ],
-        30, GROQ_MODELS.ULTRAFAST, groqApiKey,
-      )
-    },
-    onSuccess: (title) => update({ professionalTitle: title }),
-  })
+  const personal     = useBuilderStore(s => s.personal)
+  const update       = useBuilderStore(s => s.updatePersonal)
+  const profilePhoto = useBuilderStore(s => s.profilePhoto)
+  const setPhoto     = useBuilderStore(s => s.setProfilePhoto)
+  const fileRef      = useRef<HTMLInputElement>(null)
+  const [locating, setLocating] = useState(false)
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -67,10 +59,27 @@ export function PersonalInfoForm() {
     }
   }
 
+  async function detectLocation() {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+      )
+      const { city, country } = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
+      if (city)    update({ city })
+      if (country) update({ country })
+    } catch {
+      /* user denied or error — fail silently */
+    } finally {
+      setLocating(false)
+    }
+  }
+
   function field(key: keyof typeof personal, label: string, placeholder: string, type = 'text') {
     return (
       <div className="space-y-1">
-        <Label className="text-xs font-medium">{label}</Label>
+        <Label className="text-xs font-semibold">{label}</Label>
         <Input
           type={type}
           placeholder={placeholder}
@@ -83,6 +92,18 @@ export function PersonalInfoForm() {
 
   return (
     <div className="space-y-5">
+
+      {/* Show AI-generated title if already set */}
+      {personal.professionalTitle && (
+        <div className="rounded-xl bg-purple-50 border border-purple-100 px-3 py-2 flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">AI-generated title</p>
+            <p className="text-sm font-semibold text-gray-800 truncate">{personal.professionalTitle}</p>
+          </div>
+        </div>
+      )}
+
       {/* Photo upload */}
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
@@ -107,8 +128,8 @@ export function PersonalInfoForm() {
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         </div>
         <div>
-          <p className="text-sm font-medium">Profile Photo</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Appears on your resume.<br />JPG, PNG — cropped to circle.</p>
+          <p className="text-sm font-semibold text-gray-800">Profile Photo</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Optional. Appears on resume.<br />JPG or PNG.</p>
           <button
             onClick={() => fileRef.current?.click()}
             className="mt-2 text-xs text-primary underline hover:no-underline"
@@ -121,50 +142,45 @@ export function PersonalInfoForm() {
       {/* Name */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {field('firstName', 'First Name *', 'Juan')}
-        {field('lastName', 'Last Name *', 'dela Cruz')}
-      </div>
-
-      {/* Professional title with AI */}
-      <div className="space-y-1">
-        <Label className="text-xs font-medium">Professional Title</Label>
-        <div className="flex gap-2">
-          <Input
-            placeholder="e.g. Software Engineer · Marketing Manager · Barista"
-            value={personal.professionalTitle}
-            onChange={e => update({ professionalTitle: e.target.value })}
-            className="flex-1"
-          />
-          <button
-            onClick={() => suggestTitle()}
-            disabled={suggestingTitle}
-            className="shrink-0 flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50"
-            title="AI suggest title"
-          >
-            {suggestingTitle ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
-            <span className="hidden sm:inline">AI</span>
-          </button>
-        </div>
-        <p className="text-xs text-muted-foreground">This appears under your name on the resume.</p>
+        {field('lastName',  'Last Name *',  'dela Cruz')}
       </div>
 
       {/* Contact */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('email', 'Email', 'juan@example.com', 'email')}
-        {field('phone', 'Phone', '+63 912 345 6789', 'tel')}
+        {field('email', 'Email',        'juan@example.com',    'email')}
+        {field('phone', 'Phone Number', '+63 912 345 6789',    'tel'  )}
       </div>
 
-      {/* Location */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {field('city', 'City', 'Manila')}
-        {field('country', 'Country', 'Philippines')}
-        {field('address', 'Street Address', 'Quezon City')}
+      {/* Location — with detect button */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-purple-400" /> Location
+          </Label>
+          <button
+            onClick={detectLocation}
+            disabled={locating}
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors disabled:opacity-50"
+          >
+            {locating
+              ? <Loader2 className="h-3 w-3 animate-spin" />
+              : <Navigation className="h-3 w-3" />}
+            {locating ? 'Detecting…' : 'Detect my location'}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {field('city',    'City',           'Manila'     )}
+          {field('country', 'Country',        'Philippines')}
+          {field('address', 'Street Address', 'Quezon City')}
+        </div>
       </div>
 
       {/* Online presence */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('linkedin', 'LinkedIn URL', 'https://linkedin.com/in/…', 'url')}
-        {field('website', 'Portfolio / Website', 'https://yoursite.com', 'url')}
+        {field('linkedin', 'LinkedIn URL',       'https://linkedin.com/in/…', 'url')}
+        {field('website',  'Portfolio / Website', 'https://yoursite.com',     'url')}
       </div>
+
     </div>
   )
 }

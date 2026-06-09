@@ -4,10 +4,11 @@ import {
   Layout, User, FileText, Briefcase, GraduationCap, Star,
   ChevronLeft, ChevronRight, Eye, Check,
   Sparkles, Download, Settings, X, KeyRound, Loader2,
-  Target, MapPin, Search,
+  Target, MapPin, Search, Navigation,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBuilderStore, storeToSections } from '@/store/builder.store'
+import { useAISuggestJobTitle } from '@/features/resume/hooks/useAI'
 import { ResumePreviewPanel } from '@/features/resume/components/ResumePreviewPanel'
 import { ScaledResumePreview } from '@/features/resume/components/ScaledResumePreview'
 import { PersonalInfoForm } from '@/features/resume/components/forms/PersonalInfoForm'
@@ -590,6 +591,17 @@ function DoneStep({
 
 // ─── Job Target Step ──────────────────────────────────────────────────────────
 
+async function reverseGeocodeJob(lat: number, lng: number): Promise<{ city: string; country: string }> {
+  const res  = await fetch(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+  )
+  const data = await res.json() as { city?: string; locality?: string; principalSubdivision?: string; countryName?: string }
+  return {
+    city:    data.city || data.locality || data.principalSubdivision || '',
+    country: data.countryName || '',
+  }
+}
+
 function JobTargetStep({
   jobTitle, city, country, onJobChange, onLocationChange,
 }: {
@@ -599,11 +611,18 @@ function JobTargetStep({
   onJobChange: (title: string) => void
   onLocationChange: (city: string, country: string) => void
 }) {
-  const [jobQuery, setJobQuery] = useState(jobTitle)
+  const [jobQuery, setJobQuery]           = useState(jobTitle)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [locating, setLocating]           = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const suggestions = jobQuery.length >= 1
+  const experience = useBuilderStore(s => s.experience)
+  const education  = useBuilderStore(s => s.education)
+
+  const { mutate: suggestTitles, isPending: suggesting } = useAISuggestJobTitle()
+
+  const dropdownSuggestions = jobQuery.length >= 1
     ? JOB_TITLES.filter(t => t.toLowerCase().includes(jobQuery.toLowerCase())).slice(0, 8)
     : JOB_TITLES.slice(0, 8)
 
@@ -611,6 +630,32 @@ function JobTargetStep({
     setJobQuery(title)
     onJobChange(title)
     setShowSuggestions(false)
+    setAiSuggestions([])
+  }
+
+  function handleAISuggest() {
+    setAiSuggestions([])
+    suggestTitles({ experience, education }, {
+      onSuccess: (titles) => setAiSuggestions(titles),
+    })
+  }
+
+  async function detectLocation() {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+      )
+      const { city: detectedCity, country: detectedCountry } = await reverseGeocodeJob(
+        pos.coords.latitude, pos.coords.longitude
+      )
+      onLocationChange(detectedCity || city, detectedCountry || country)
+    } catch {
+      /* user denied or error — fail silently */
+    } finally {
+      setLocating(false)
+    }
   }
 
   return (
@@ -632,11 +677,23 @@ function JobTargetStep({
 
       {/* ── Location FIRST ── */}
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
-        <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-          <MapPin className="h-4 w-4 text-purple-500" />
-          Where are you based?
-          <span className="font-normal text-gray-400 text-xs ml-1">helps AI match local market</span>
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+            <MapPin className="h-4 w-4 text-purple-500" />
+            Where are you based?
+            <span className="font-normal text-gray-400 text-xs ml-1">helps AI match local market</span>
+          </label>
+          <button
+            onClick={detectLocation}
+            disabled={locating}
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors disabled:opacity-50"
+          >
+            {locating
+              ? <Loader2 className="h-3 w-3 animate-spin" />
+              : <Navigation className="h-3 w-3" />}
+            {locating ? 'Detecting…' : 'Detect location'}
+          </button>
+        </div>
         <div className="flex flex-col gap-3">
           <input
             type="text"
@@ -657,10 +714,47 @@ function JobTargetStep({
 
       {/* ── Job title ── */}
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
-        <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-          <Target className="h-4 w-4 text-purple-500" />
-          What job are you applying for? *
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+            <Target className="h-4 w-4 text-purple-500" />
+            What job are you applying for? *
+          </label>
+          <button
+            onClick={handleAISuggest}
+            disabled={suggesting}
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white transition-colors disabled:opacity-50"
+            style={{ background: suggesting ? '#a855f7' : 'var(--melo-gradient)' }}
+          >
+            {suggesting
+              ? <Loader2 className="h-3 w-3 animate-spin" />
+              : <Sparkles className="h-3 w-3" />}
+            {suggesting ? 'Thinking…' : 'AI Suggest'}
+          </button>
+        </div>
+
+        {/* AI Suggestions chips */}
+        {aiSuggestions.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">AI suggestions — tap to select</p>
+            <div className="flex flex-wrap gap-2">
+              {aiSuggestions.map(title => (
+                <button
+                  key={title}
+                  onClick={() => selectJob(title)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
+                    title === jobTitle
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                  )}
+                >
+                  {title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input
@@ -673,9 +767,9 @@ function JobTargetStep({
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
           />
-          {showSuggestions && suggestions.length > 0 && (
+          {showSuggestions && dropdownSuggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl shadow-xl bg-white border border-gray-200">
-              {suggestions.map(title => (
+              {dropdownSuggestions.map(title => (
                 <button
                   key={title}
                   onMouseDown={() => selectJob(title)}
@@ -698,7 +792,7 @@ function JobTargetStep({
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-400">From barista to CEO — type anything or pick from the list.</p>
+        <p className="text-xs text-gray-400">From barista to CEO — type anything, pick from list, or tap AI Suggest.</p>
       </div>
 
       {/* What AI will do */}

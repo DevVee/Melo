@@ -114,6 +114,96 @@ Rules:
   })
 }
 
+// ─── Suggest Target Job Titles ───────────────────────────────────────────────
+
+/**
+ * Suggests 6 specific job titles based on the user's existing experience/education.
+ * Used on Step 0 (Goal) so users who don't know exactly what to apply for get help.
+ */
+export function useAISuggestJobTitle() {
+  const key = useKey()
+  const { location } = useJobCtx()
+
+  return useMutation({
+    mutationFn: async ({
+      experience, education,
+    }: { experience: WorkEntry[]; education: EducationEntry[] }): Promise<string[]> => {
+      const expText = experience.slice(0, 3).map(e => `${e.position} at ${e.company}`).join(', ')
+      const eduText = education.slice(0, 2).map(e => [e.degree, e.program, e.school].filter(Boolean).join(' ')).join(', ')
+
+      const result = await callGroq(
+        [
+          {
+            role: 'system',
+            content: `${JSON_ONLY_SYSTEM}\nYou are a career advisor. Return ONLY a JSON array of exactly 6 job title strings — specific, realistic, and varied (from entry-level to senior). No explanation.`,
+          },
+          {
+            role: 'user',
+            content: `Suggest 6 job titles this person should apply for:
+${expText ? `Work history: ${expText}` : 'No work history yet — suggest entry-level or general roles'}
+${eduText ? `Education: ${eduText}` : ''}
+${location ? `Target market: ${location}` : ''}
+Return JSON array of 6 strings.`,
+          },
+        ],
+        200,
+        GROQ_MODELS.FAST,
+        key,
+      )
+      try {
+        const parsed = JSON.parse(result) as string[]
+        return Array.isArray(parsed) ? parsed.slice(0, 6) : []
+      } catch {
+        return result.split('\n').map(l => l.replace(/^[-•*"\d.]+\s*/, '').replace(/[",]$/, '')).filter(Boolean).slice(0, 6)
+      }
+    },
+  })
+}
+
+// ─── Generate Professional Title ─────────────────────────────────────────────
+
+/**
+ * Auto-generates a professional resume headline from their background + target job.
+ * Called in SummaryForm so users don't need to think of one themselves.
+ */
+export function useGenerateProfessionalTitle() {
+  const key = useKey()
+  const { targetJob } = useJobCtx()
+
+  return useMutation({
+    mutationFn: async ({
+      experience, education,
+    }: { experience: WorkEntry[]; education: EducationEntry[] }): Promise<string> => {
+      const recentRole  = experience[0]?.position
+      const recentCo    = experience[0]?.company
+      const target      = targetJob || recentRole || ''
+      const eduNote     = education[0] ? `${education[0].degree} ${education[0].program}` : ''
+      const years       = calcYears(experience)
+      const yearsNote   = years > 0 ? `${years} year${years > 1 ? 's' : ''} experience` : 'entry-level'
+
+      return callGroq(
+        [
+          {
+            role: 'system',
+            content: 'You are a resume expert. Output ONLY a short, professional resume headline/title. Max 5 words. No quotes, no punctuation at end, no explanation.',
+          },
+          {
+            role: 'user',
+            content: `Write a professional title for someone applying for "${target}".
+Recent role: ${recentRole ? `${recentRole}${recentCo ? ` at ${recentCo}` : ''}` : 'none'}
+Education: ${eduNote || 'not specified'}
+Experience level: ${yearsNote}
+Output: one concise professional title only.`,
+          },
+        ],
+        25,
+        GROQ_MODELS.ULTRAFAST,
+        key,
+      )
+    },
+  })
+}
+
 // ─── Improve Bullet Points ────────────────────────────────────────────────────
 
 export function useImproveBullets() {
