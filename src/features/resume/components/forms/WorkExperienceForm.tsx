@@ -12,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useBuilderStore } from '@/store/builder.store'
 import { useImproveBullets, useGenerateBulletsFromRole } from '@/features/resume/hooks/useAI'
-import type { WorkEntry } from '@/store/builder.store'
 
 const EMPLOYMENT_TYPES = [
   { value: 'full_time',   label: 'Full-time'   },

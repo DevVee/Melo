@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Sparkles, Loader2, ChevronRight, ChevronDown } from 'lucide-react'
+import { Plus, X, Sparkles, Loader2 } from 'lucide-react'
 import { useBuilderStore } from '@/store/builder.store'
 import { useSuggestSkills } from '@/features/resume/hooks/useAI'
 import type { SkillEntry } from '@/store/builder.store'

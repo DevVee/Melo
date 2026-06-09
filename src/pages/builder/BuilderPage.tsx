@@ -70,7 +70,6 @@ export default function BuilderPage() {
 
   // Store
   const templateId       = useBuilderStore(s => s.templateId)
-  const templateName     = useBuilderStore(s => s.templateName)
   const profilePhoto     = useBuilderStore(s => s.profilePhoto)
   const personal         = useBuilderStore(s => s.personal)
   const experience       = useBuilderStore(s => s.experience)
