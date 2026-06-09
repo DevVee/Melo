@@ -262,8 +262,10 @@ function ExperienceEntry({
 
           {/* AI tip */}
           {entry.bullets.every(b => !b.trim()) && !generating && (
-            <div className="rounded-lg bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900 p-3 text-xs text-violet-700 dark:text-violet-300">
-              <strong>💡 Tip:</strong> Click <strong>AI Write</strong> to auto-generate bullet points based on your job title and company. Or type your own and use <strong>AI Improve</strong> to make them more impactful.
+            <div className="rounded-xl border-l-4 border-l-purple-400 border border-purple-200 bg-purple-50 p-3 text-xs leading-relaxed text-gray-700">
+              <span className="font-bold text-purple-700">💡 Tip:</span>{' '}
+              Click <span className="font-bold text-purple-700 bg-purple-100 rounded px-1">AI Write</span> to auto-generate bullet points from your job title &amp; company.
+              Or type your own and use <span className="font-bold text-purple-700 bg-purple-100 rounded px-1">AI Improve</span> to make them more impactful.
             </div>
           )}
         </div>

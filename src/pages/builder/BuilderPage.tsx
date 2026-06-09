@@ -564,7 +564,7 @@ function DoneStep({
           Download as
         </p>
 
-        {/* PDF — primary gradient */}
+        {/* PDF — primary */}
         <button
           onClick={() => onExport('pdf')}
           disabled={exporting}
@@ -572,26 +572,21 @@ function DoneStep({
           style={{ background: 'var(--melo-gradient)', boxShadow: '0 6px 24px rgba(168,85,247,0.35)' }}
         >
           {exporting && exportType === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          Download PDF
+          {exporting && exportType === 'pdf' ? 'Generating PDF…' : 'Download PDF'}
         </button>
 
-        {/* DOCX + PNG */}
-        <div className="grid grid-cols-2 gap-2">
-          {(['docx', 'png'] as const).map(type => (
-            <button
-              key={type}
-              onClick={() => onExport(type)}
-              disabled={exporting}
-              className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
-            >
-              {exporting && exportType === type ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {type === 'docx' ? 'Word (.docx)' : 'Image (.png)'}
-            </button>
-          ))}
-        </div>
+        {/* PNG */}
+        <button
+          onClick={() => onExport('png')}
+          disabled={exporting}
+          className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+        >
+          {exporting && exportType === 'png' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {exporting && exportType === 'png' ? 'Generating Image…' : 'Download Image (.png)'}
+        </button>
 
         <p className="text-[11px] text-center pt-1 text-gray-400">
-          PDF for job applications · DOCX for ATS systems · PNG for social media
+          PDF for job applications · PNG for portfolio &amp; social media
         </p>
       </div>
 

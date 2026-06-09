@@ -7,63 +7,85 @@
  *   html-to-image uses the browser's native SVGForeignObject renderer, so all
  *   modern CSS (oklch, color-mix, container queries…) just works.
  *
- * WHY zIndex 999999 during capture (not -999):
- *   html-to-image calls getComputedStyle which works fine on off-screen
- *   elements, BUT the browser won't paint elements that are behind a solid
- *   background (z:-999 below body background). We move the element to top-left
- *   at maximum z-index for the 2-3 frame window of capture, then restore.
- *   An overlay div at z:999998 hides it from the user during that moment.
+ * A4 sizing strategy:
+ *   - Capture at exactly 794px wide (A4 at 96 dpi), minimum 1123px tall.
+ *   - PDF pages are always exactly 210mm × 297mm; last page padded white.
+ *   - PNG is the full natural height of the resume content.
  */
 
 import { toPng } from 'html-to-image'
 import jsPDF from 'jspdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx'
 
-const A4_W_PX = 794   // A4 width at 96 dpi
-const PIXEL_RATIO = 2 // retina / print quality
+const A4_W_PX  = 794    // A4 width  at 96 dpi
+const A4_H_PX  = 1123   // A4 height at 96 dpi
+const A4_W_MM  = 210    // jsPDF millimetres
+const A4_H_MM  = 297
+const PX_RATIO = 2      // retina capture quality
 
-/** Wait N animation frames */
-function waitFrames(n = 2): Promise<void> {
+/** Wait N animation frames for browser repaint */
+function waitFrames(n = 3): Promise<void> {
   return new Promise(resolve => {
-    let count = 0
-    function tick() { if (++count >= n) resolve(); else requestAnimationFrame(tick) }
+    let c = 0
+    const tick = () => { if (++c >= n) resolve(); else requestAnimationFrame(tick) }
     requestAnimationFrame(tick)
   })
 }
 
-/** Wait for fonts to finish loading */
+/** Wait for web fonts to finish loading */
 async function fontsReady(): Promise<void> {
   try { if (document.fonts?.ready) await document.fonts.ready } catch { /* non-critical */ }
 }
 
+/** Load an Image from a data URL */
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+// ─── Core capture ─────────────────────────────────────────────────────────────
+
 /**
- * Capture element to PNG data URL using html-to-image.
+ * Capture element as a hi-res PNG data URL.
  *
- * Strategy:
- *  1. Show a "Generating…" overlay so user can't see the element flash.
- *  2. Move element to position:fixed top:0 left:0 z:999999 (above overlay).
- *  3. Wait 3 frames for repaint.
- *  4. Capture with html-to-image (SVG foreign object — handles all CSS).
- *  5. Restore element styles, remove overlay.
+ * 1. Show a white overlay (hides the flash from the user).
+ * 2. Move element to top:0 left:0 z:999999 so browser paints it fully.
+ * 3. Wait 3 frames for reflow + repaint.
+ * 4. Capture with html-to-image (native SVG renderer — handles all CSS).
+ * 5. Restore + remove overlay.
  */
 async function captureElement(element: HTMLElement): Promise<string> {
   await fontsReady()
 
-  // ── 1. Overlay to hide the brief flash ──────────────────────────────────────
+  // Measure natural height BEFORE any style override (most reliable)
+  const naturalH = Math.max(A4_H_PX, element.scrollHeight || element.offsetHeight)
+
+  // ── Overlay ──────────────────────────────────────────────────────────────────
   const overlay = document.createElement('div')
   overlay.style.cssText = [
     'position:fixed', 'inset:0', 'z-index:999998',
-    'background:rgba(255,255,255,0.97)',
+    'background:rgba(255,255,255,0.98)',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'font-family:sans-serif', 'font-size:14px', 'color:#888',
+    'font-family:sans-serif', 'font-size:14px', 'color:#9333ea',
+    'font-weight:600', 'letter-spacing:0.02em',
     'pointer-events:none',
   ].join(';')
-  overlay.textContent = 'Generating your resume…'
+  overlay.textContent = '✨ Generating your resume…'
   document.body.appendChild(overlay)
 
-  // ── 2. Save & override element styles ───────────────────────────────────────
-  const saved: Record<string, string> = {}
-  const overrides: Record<string, string> = {
+  // ── Save & override element styles ───────────────────────────────────────────
+  const keys = ['position','top','left','right','bottom','zIndex','width',
+                 'minHeight','maxWidth','borderRadius','boxShadow','overflow',
+                 'pointerEvents','margin','transform','opacity'] as const
+  type StyleKey = typeof keys[number]
+  const saved: Partial<CSSStyleDeclaration> = {}
+  keys.forEach(k => { saved[k] = element.style[k as StyleKey] })
+
+  Object.assign(element.style, {
     position:      'fixed',
     top:           '0',
     left:          '0',
@@ -71,6 +93,7 @@ async function captureElement(element: HTMLElement): Promise<string> {
     bottom:        'auto',
     zIndex:        '999999',
     width:         `${A4_W_PX}px`,
+    minHeight:     `${A4_H_PX}px`,   // always at least one A4 page
     maxWidth:      'none',
     borderRadius:  '0',
     boxShadow:     'none',
@@ -78,83 +101,76 @@ async function captureElement(element: HTMLElement): Promise<string> {
     pointerEvents: 'none',
     margin:        '0',
     transform:     'none',
-  }
-  for (const key of Object.keys(overrides)) {
-    saved[key] = (element.style as unknown as Record<string, string>)[key]
-  }
-  Object.assign(element.style, overrides)
+    opacity:       '1',
+  })
 
-  // ── 3. Wait for browser to repaint ──────────────────────────────────────────
   await waitFrames(3)
 
-  // ── 4. Capture ──────────────────────────────────────────────────────────────
+  // Re-measure after reflow (may have grown due to minHeight)
+  const captureH = Math.max(naturalH, element.scrollHeight || A4_H_PX)
+
   try {
     const dataUrl = await toPng(element, {
-      pixelRatio: PIXEL_RATIO,
-      width:  A4_W_PX,
-      height: element.scrollHeight,
+      pixelRatio: PX_RATIO,
+      width:      A4_W_PX,
+      height:     captureH,
       style: {
-        margin:      '0',
-        padding:     '0',
-        borderRadius:'0',
-        boxShadow:   'none',
-        overflow:    'visible',
+        margin: '0', padding: '0',
+        borderRadius: '0', boxShadow: 'none', overflow: 'visible',
       },
     })
     return dataUrl
   } finally {
-    // ── 5. Restore ─────────────────────────────────────────────────────────────
-    for (const key of Object.keys(saved)) {
-      (element.style as unknown as Record<string, string>)[key] = saved[key]
-    }
+    // Restore styles
+    keys.forEach(k => {
+      element.style[k as StyleKey] = (saved[k as StyleKey] ?? '') as string
+    })
     document.body.removeChild(overlay)
   }
 }
 
 // ─── PDF export ───────────────────────────────────────────────────────────────
 
+/**
+ * Export to PDF — always proper A4 pages (210 × 297 mm).
+ * Last page is padded with white to full A4 height so every page
+ * looks like a real sheet of paper.
+ */
 export async function exportToPDF(element: HTMLElement, filename = 'resume.pdf'): Promise<void> {
   const dataUrl = await captureElement(element)
+  const img     = await loadImage(dataUrl)
 
-  const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const pageW  = pdf.internal.pageSize.getWidth()   // 210 mm
-  const pageH  = pdf.internal.pageSize.getHeight()  // 297 mm
+  // Content dimensions at 1× (undo pixel ratio)
+  const contentW = img.width  / PX_RATIO   // ≈ A4_W_PX
+  const contentH = img.height / PX_RATIO
 
-  // Load the image to get actual dimensions
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image()
-    i.onload = () => resolve(i)
-    i.onerror = reject
-    i.src = dataUrl
-  })
+  // How many full A4 pages?
+  const numPages = Math.max(1, Math.ceil(contentH / A4_H_PX))
 
-  // img dimensions are at pixelRatio × actual size
-  const srcW   = img.width  / PIXEL_RATIO   // natural px at 1×
-  const srcH   = img.height / PIXEL_RATIO
-  const ratio  = pageW / srcW               // mm per px
-  const totalH = srcH * ratio               // total mm height
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
-  // Slice into A4 pages
-  let remaining = totalH
-  let page = 0
-
-  while (remaining > 0) {
+  for (let page = 0; page < numPages; page++) {
     if (page > 0) pdf.addPage()
 
-    const sliceH    = Math.min(pageH, remaining)
-    const srcSliceH = (sliceH / ratio) * PIXEL_RATIO   // in canvas px
-    const srcOffY   = page * pageH / ratio * PIXEL_RATIO
+    // Source slice in canvas (2×) pixels
+    const srcY = page * A4_H_PX * PX_RATIO
+    const srcH = Math.min(A4_H_PX * PX_RATIO, img.height - srcY)
 
-    // Draw just this slice onto a temp canvas
-    const slice = document.createElement('canvas')
-    slice.width  = img.width
-    slice.height = Math.ceil(srcSliceH)
-    const ctx = slice.getContext('2d')!
-    ctx.drawImage(img, 0, srcOffY, img.width, srcSliceH, 0, 0, img.width, srcSliceH)
-    pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pageW, sliceH)
+    // Create a full A4 page canvas — always 794×1123 at 1× (1588×2246 at 2×)
+    const pageCanvas   = document.createElement('canvas')
+    pageCanvas.width   = Math.round(contentW * PX_RATIO)     // 1588
+    pageCanvas.height  = A4_H_PX * PX_RATIO                  // 2246 — always full A4
+    const ctx = pageCanvas.getContext('2d')!
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)  // white background
 
-    remaining -= sliceH
-    page++
+    // Draw only the slice that belongs to this page
+    if (srcH > 0) {
+      ctx.drawImage(img, 0, srcY, img.width, srcH, 0, 0, img.width, srcH)
+    }
+
+    // Add to PDF at exact A4 dimensions
+    pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, A4_W_MM, A4_H_MM)
   }
 
   pdf.save(filename)
@@ -170,14 +186,11 @@ export async function exportToPNG(element: HTMLElement, filename = 'resume.png')
   link.click()
 }
 
-// ─── JPEG export ─────────────────────────────────────────────────────────────
+// ─── JPEG export ──────────────────────────────────────────────────────────────
 
 export async function exportToJPEG(element: HTMLElement, filename = 'resume.jpg'): Promise<void> {
-  // html-to-image toJpeg works too, but PNG -> canvas -> toDataURL gives better control
   const dataUrl = await captureElement(element)
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = dataUrl
-  })
+  const img = await loadImage(dataUrl)
   const canvas = document.createElement('canvas')
   canvas.width  = img.width
   canvas.height = img.height
@@ -206,14 +219,12 @@ export async function exportToDOCX(resumeData: {
 }, filename = 'resume.docx'): Promise<void> {
   const children: Paragraph[] = []
 
-  // Name — large, centered
   children.push(new Paragraph({
     children: [new TextRun({ text: resumeData.name, bold: true, size: 36, font: 'Calibri', color: '111111' })],
     alignment: AlignmentType.CENTER,
     spacing: { after: 80 },
   }))
 
-  // Title
   if (resumeData.title) {
     children.push(new Paragraph({
       children: [new TextRun({ text: resumeData.title, size: 24, color: '444444', font: 'Calibri' })],
@@ -222,7 +233,6 @@ export async function exportToDOCX(resumeData: {
     }))
   }
 
-  // Contact bar
   const contact = [resumeData.email, resumeData.phone, resumeData.location].filter(Boolean)
   if (contact.length) {
     children.push(new Paragraph({
@@ -296,19 +306,13 @@ export async function exportToDOCX(resumeData: {
   }
 
   const doc = new Document({
-    styles: {
-      default: {
-        document: { run: { font: 'Calibri', size: 22, color: '111111' } },
-      },
-    },
+    styles: { default: { document: { run: { font: 'Calibri', size: 22, color: '111111' } } } },
     sections: [{ properties: {}, children }],
   })
 
   const blob = await Packer.toBlob(doc)
   const url  = URL.createObjectURL(blob)
   const link = document.createElement('a')
-  link.href     = url
-  link.download = filename
-  link.click()
+  link.href = url; link.download = filename; link.click()
   URL.revokeObjectURL(url)
 }

@@ -26,13 +26,14 @@ function guessCategory(name: string): SkillEntry['category'] {
   return 'technical'
 }
 
+// Category badge — used for both category headers and added skill pills
 const CAT_PILL: Record<string, string> = {
-  technical: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  soft:      'bg-emerald-50 text-emerald-700 border-emerald-200',
-  language:  'bg-rose-50 text-rose-700 border-rose-200',
-  framework: 'bg-violet-50 text-violet-700 border-violet-200',
-  platform:  'bg-cyan-50 text-cyan-700 border-cyan-200',
-  tool:      'bg-orange-50 text-orange-700 border-orange-200',
+  technical: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+  soft:      'bg-emerald-100 text-emerald-800 border-emerald-300',
+  language:  'bg-rose-100 text-rose-800 border-rose-300',
+  framework: 'bg-violet-100 text-violet-800 border-violet-300',
+  platform:  'bg-cyan-100 text-cyan-800 border-cyan-300',
+  tool:      'bg-orange-100 text-orange-800 border-orange-300',
 }
 
 export function SkillsForm() {
@@ -158,17 +159,17 @@ export function SkillsForm() {
           <ul className="space-y-1">
             {pageItems.map(skill => (
               <li key={skill.id}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-purple-50 transition-colors cursor-pointer group"
+                className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 hover:bg-purple-50 hover:border-purple-200 transition-colors cursor-pointer group"
                 onClick={() => addFromSuggestion(skill)}>
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shrink-0" />
-                <span className="flex-1 text-sm text-gray-700 group-hover:text-purple-700">{skill.name}</span>
+                <span className="flex-1 text-sm font-medium text-gray-800 group-hover:text-purple-700">{skill.name}</span>
                 <span className={cn(
-                  'rounded-full border px-1.5 py-0.5 text-[10px] font-medium capitalize',
+                  'rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize',
                   CAT_PILL[skill.category] ?? CAT_PILL.technical
                 )}>
                   {skill.category}
                 </span>
-                <Plus className="h-3.5 w-3.5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                <Plus className="h-3.5 w-3.5 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </li>
             ))}
           </ul>
@@ -251,10 +252,13 @@ export function SkillsForm() {
               <div className="flex flex-wrap gap-1.5">
                 {byCategory[cat].map(skill => (
                   <div key={skill.id}
-                    className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700 hover:border-red-200 group transition-colors">
-                    <span className="font-medium">{skill.name}</span>
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium group transition-colors hover:opacity-80',
+                      CAT_PILL[skill.category] ?? CAT_PILL.technical
+                    )}>
+                    <span>{skill.name}</span>
                     <button type="button" onClick={() => removeSkill(skill.id)}
-                      className="text-gray-300 group-hover:text-red-400 transition-colors">
+                      className="opacity-50 hover:opacity-100 transition-opacity ml-0.5">
                       <X className="h-3 w-3" />
                     </button>
                   </div>
