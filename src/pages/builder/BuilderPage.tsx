@@ -561,11 +561,16 @@ function DoneStep({
         <div className="rounded-xl overflow-hidden shadow-2xl border border-gray-100">
           <ScaledResumePreview sections={sections} templateName={templateName} />
         </div>
-        {/* Hidden export target — off-screen left so browser still paints it fully.
-            captureElement() moves it to top:0 left:0 for capture then restores. */}
+        {/* Hidden export target — off-screen so browser paints it at full A4 dimensions.
+            minHeight ensures templates always render at least one full A4 page tall.
+            captureElement() moves this to top:0 left:0 at capture time, then restores. */}
         <div
           id="resume-export-canvas"
-          style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', background: '#fff', pointerEvents: 'none' }}
+          style={{
+            position: 'fixed', top: 0, left: '-9999px',
+            width: '794px', minHeight: '1123px',
+            background: '#ffffff', pointerEvents: 'none',
+          }}
           aria-hidden="true"
         >
           <ResumePreviewPanel sections={sections} templateName={templateName} />
