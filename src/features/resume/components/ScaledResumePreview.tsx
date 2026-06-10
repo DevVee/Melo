@@ -1,7 +1,7 @@
 /**
- * ScaledResumePreview — always renders the resume at exact A4 width (794px)
- * then scales it down via CSS transform to fit whatever container it's in.
- * This means mobile users see the exact same layout as desktop — just smaller.
+ * ScaledResumePreview — renders the resume at exact A4 width (794px)
+ * then scales it down via CSS transform to fit any container.
+ * Always shows at least a full A4 page height so the preview never looks "short".
  */
 import { useRef, useEffect, useState } from 'react'
 import { ResumePreviewPanel } from './ResumePreviewPanel'
@@ -19,13 +19,14 @@ type Props = {
   className?: string
 }
 
-const A4_WIDTH = 794
+const A4_WIDTH  = 794
+const A4_HEIGHT = 1123  // minimum — always show at least one full A4 page
 
 export function ScaledResumePreview({ sections, templateName, className }: Props) {
   const outerRef  = useRef<HTMLDivElement>(null)
   const innerRef  = useRef<HTMLDivElement>(null)
   const [scale, setScale]             = useState(1)
-  const [innerHeight, setInnerHeight] = useState(1123) // A4 default
+  const [innerHeight, setInnerHeight] = useState(A4_HEIGHT)
 
   // Update scale when outer container resizes
   useEffect(() => {
@@ -40,13 +41,13 @@ export function ScaledResumePreview({ sections, templateName, className }: Props
     return () => obs.disconnect()
   }, [])
 
-  // Track real rendered height of the inner resume
+  // Track rendered height — never shorter than one A4 page
   useEffect(() => {
     const el = innerRef.current
     if (!el) return
     const obs = new ResizeObserver(() => {
       if (innerRef.current) {
-        setInnerHeight(innerRef.current.scrollHeight)
+        setInnerHeight(Math.max(A4_HEIGHT, innerRef.current.scrollHeight))
       }
     })
     obs.observe(el)
@@ -60,7 +61,6 @@ export function ScaledResumePreview({ sections, templateName, className }: Props
       style={{
         width: '100%',
         overflow: 'hidden',
-        // outer height = inner height scaled down, so no empty space below
         height: `${Math.round(innerHeight * scale)}px`,
       }}
     >
@@ -68,6 +68,7 @@ export function ScaledResumePreview({ sections, templateName, className }: Props
         ref={innerRef}
         style={{
           width: `${A4_WIDTH}px`,
+          minHeight: `${A4_HEIGHT}px`,
           transformOrigin: 'top left',
           transform: `scale(${scale})`,
         }}

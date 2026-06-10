@@ -597,11 +597,12 @@ async function reverseGeocodeJob(lat: number, lng: number): Promise<{ city: stri
     `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
   )
   const data = await res.json() as { city?: string; locality?: string; principalSubdivision?: string; countryName?: string }
+  const strip = (s: string) => s.replace(/\s*\([^)]*\)\s*/g, '').trim()
   // Strip ISO "(the)" suffix: "Philippines (the)" → "Philippines"
-  const country  = (data.countryName || '').replace(/\s*\(the\b[^)]*\)\s*$/i, '').trim()
+  const country  = strip((data.countryName || '').replace(/\s*\(the\b[^)]*\)\s*$/i, ''))
   // Format: "Locality, Province" → e.g. "Balayan, Batangas"
-  const locality = data.locality || data.city || ''
-  const province = data.principalSubdivision || ''
+  const locality = strip(data.locality || data.city || '')
+  const province = strip(data.principalSubdivision || '')
   const city     = [locality, province].filter(Boolean).join(', ')
   return { city, country }
 }
@@ -664,60 +665,44 @@ function JobTargetStep({
 
   return (
     <div className="space-y-6">
-      {/* Intro card */}
-      <div className="rounded-2xl p-4 flex items-start gap-3 border"
-        style={{ background: 'var(--melo-gradient-soft)', borderColor: 'rgba(244,114,182,0.3)' }}>
-        <div className="rounded-xl p-2 shrink-0 text-white" style={{ background: 'var(--melo-gradient)' }}>
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-sm text-gray-900">AI-Powered Resume Builder</h3>
-          <p className="text-xs mt-1 leading-relaxed text-gray-500">
-            Tell us where you're based and the job you want. Melo's AI tailors every section
-            — summaries, bullets, and skills — for your exact role and market.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Location FIRST ── */}
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
+      {/* ── Location ── */}
+      <div className="bg-white border border-gray-200 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
             <MapPin className="h-4 w-4 text-purple-500" />
             Where are you based?
-            <span className="font-normal text-gray-400 text-xs ml-1">helps AI match local market</span>
           </label>
           <button
             onClick={detectLocation}
             disabled={locating}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 rounded-[2px] px-2.5 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors disabled:opacity-50"
           >
             {locating
               ? <Loader2 className="h-3 w-3 animate-spin" />
               : <Navigation className="h-3 w-3" />}
-            {locating ? 'Detecting…' : 'Detect location'}
+            {locating ? 'Detecting…' : 'Use my location'}
           </button>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <input
             type="text"
             value={city}
-            placeholder="City (e.g. Metro Manila)"
+            placeholder="City / Province (e.g. Balayan, Batangas)"
             onChange={e => onLocationChange(e.target.value, country)}
-            className="w-full rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+            className="w-full rounded-[2px] px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-300 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
           />
           <input
             type="text"
             value={country}
             placeholder="Country (e.g. Philippines)"
             onChange={e => onLocationChange(city, e.target.value)}
-            className="w-full rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+            className="w-full rounded-[2px] px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-300 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
           />
         </div>
       </div>
 
       {/* ── Job title ── */}
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
+      <div className="bg-white border border-gray-200 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
             <Target className="h-4 w-4 text-purple-500" />
@@ -726,36 +711,33 @@ function JobTargetStep({
           <button
             onClick={handleAISuggest}
             disabled={suggesting}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 rounded-[2px] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50"
             style={{ background: suggesting ? '#a855f7' : 'var(--melo-gradient)' }}
           >
             {suggesting
               ? <Loader2 className="h-3 w-3 animate-spin" />
               : <Sparkles className="h-3 w-3" />}
-            {suggesting ? 'Thinking…' : 'AI Suggest'}
+            {suggesting ? 'Loading…' : 'Suggest for me'}
           </button>
         </div>
 
-        {/* AI Suggestions chips */}
+        {/* Suggestions chips */}
         {aiSuggestions.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">AI suggestions — tap to select</p>
-            <div className="flex flex-wrap gap-2">
-              {aiSuggestions.map(title => (
-                <button
-                  key={title}
-                  onClick={() => selectJob(title)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                    title === jobTitle
-                      ? 'bg-purple-600 text-white border-purple-600'
-                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
-                  )}
-                >
-                  {title}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {aiSuggestions.map(title => (
+              <button
+                key={title}
+                onClick={() => selectJob(title)}
+                className={cn(
+                  'px-3 py-1.5 rounded-[2px] text-sm font-medium border transition-all',
+                  title === jobTitle
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                )}
+              >
+                {title}
+              </button>
+            ))}
           </div>
         )}
 
@@ -765,14 +747,14 @@ function JobTargetStep({
             ref={inputRef}
             type="text"
             value={jobQuery}
-            placeholder="e.g. Barista, Software Engineer, Nurse…"
+            placeholder="Search or type any job title…"
             onChange={e => { setJobQuery(e.target.value); onJobChange(e.target.value); setShowSuggestions(true) }}
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+            className="w-full rounded-[2px] pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-300 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
           />
           {showSuggestions && dropdownSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-20 mt-2 max-h-52 overflow-y-auto rounded-xl shadow-xl bg-white border border-gray-200">
+            <div className="absolute top-full left-0 right-0 z-20 mt-1 max-h-52 overflow-y-auto bg-white border border-gray-200 shadow-lg">
               {dropdownSuggestions.map(title => (
                 <button
                   key={title}
@@ -782,7 +764,7 @@ function JobTargetStep({
                     title === jobTitle ? 'text-purple-600 font-semibold bg-purple-50' : 'text-gray-700'
                   )}
                 >
-                  {title === jobTitle ? <strong>{title}</strong> : title}
+                  {title}
                 </button>
               ))}
               {jobQuery && !JOB_TITLES.includes(jobQuery) && (
@@ -796,22 +778,22 @@ function JobTargetStep({
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-400">From barista to CEO — type anything, pick from list, or tap AI Suggest.</p>
+        <p className="text-xs text-gray-500">You can type any job — e.g. Nurse, Teacher, Barista, Seafarer, BPO Agent</p>
       </div>
 
-      {/* What AI will do */}
+      {/* What Melo will customize */}
       {jobTitle && (
-        <div className="rounded-2xl p-4 space-y-2 bg-white border border-gray-100 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">AI will tailor</p>
+        <div className="p-4 space-y-2 bg-white border border-gray-200">
+          <p className="text-sm font-semibold text-gray-800">What Melo will customize for you</p>
           <ul className="space-y-1.5">
             {[
-              `Professional summary for ${jobTitle}`,
-              `Skills ranked by ${jobTitle} ATS relevance`,
-              `Bullet points matching ${jobTitle} expectations`,
+              `Summary — written for ${jobTitle}`,
+              `Skills — ranked for ${jobTitle} applications`,
+              `Bullet points — matched to ${jobTitle} expectations`,
             ].map(item => (
-              <li key={item} className="flex items-start gap-2 text-sm">
+              <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
                 <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                <span className="text-gray-600">{item}</span>
+                {item}
               </li>
             ))}
           </ul>

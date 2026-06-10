@@ -50,12 +50,15 @@ async function reverseGeocode(
   )
   const data = await res.json() as BDCResponse
 
+  // Strip any parenthetical suffix from a name: "Batangas (3rd District)" → "Batangas"
+  function stripParens(s: string) { return s.replace(/\s*\([^)]*\)\s*/g, '').trim() }
+
   // Country: strip "(the)" suffix — e.g. "Philippines (the)" → "Philippines"
   const country = cleanCountryName(data.countryName || '')
 
   // City field: "Locality, Province" — e.g. "Balayan, Batangas"
-  const locality = data.locality || data.city || ''
-  const province = data.principalSubdivision || ''
+  const locality = stripParens(data.locality || data.city || '')
+  const province = stripParens(data.principalSubdivision || '')
   const city = [locality, province].filter(Boolean).join(', ')
 
   // Barangay / street: pick the most granular admin level from localityInfo
