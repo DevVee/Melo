@@ -76,6 +76,7 @@ export default function BuilderPage() {
   const experience       = useBuilderStore(s => s.experience)
   const education        = useBuilderStore(s => s.education)
   const skills           = useBuilderStore(s => s.skills)
+  const strengths        = useBuilderStore(s => s.strengths)
   const targetJobTitle   = useBuilderStore(s => s.targetJobTitle)
   const targetCity       = useBuilderStore(s => s.targetCity)
   const targetCountry    = useBuilderStore(s => s.targetCountry)
@@ -86,8 +87,8 @@ export default function BuilderPage() {
   const setGroqApiKey = useBuilderStore(s => s.setGroqApiKey)
   const resetResume   = useBuilderStore(s => s.reset)
 
-  // Derived live sections for preview
-  const sections = storeToSections({ personal, experience, education, skills, profilePhoto })
+  // Derived live sections for preview (includes strengths merged into skills)
+  const sections = storeToSections({ personal, experience, education, skills, strengths, profilePhoto })
   const currentTemplate = TEMPLATES.find(t => t.id === templateId) ?? TEMPLATES[0]
 
   const setStep = useCallback((n: number) => {
@@ -239,39 +240,66 @@ export default function BuilderPage() {
             {/* ── Step 6: Design / Template selection ─────────────────────── */}
             {step === 6 && (
               <div key="step-6" className="animate-slide-up-sm space-y-4">
-                {/* Live preview of current choice */}
-                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-                      <Eye className="h-4 w-4 text-purple-500" />
-                      Preview — <span className="brand-gradient-text">{currentTemplate.name}</span>
-                    </p>
-                    <span className="text-xs text-gray-400">This is how your resume will look</span>
+
+                {/* Template picker row — small scrollable thumbnails */}
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Choose a Template</p>
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                    {TEMPLATES.slice(0, 8).map(t => {
+                      const isSelected = t.id === templateId || (!templateId && t.id === TEMPLATES[0].id)
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => setTemplate(t.id, t.name)}
+                          className={cn(
+                            'shrink-0 rounded-[3px] border-2 overflow-hidden transition-all',
+                            isSelected ? 'border-purple-500' : 'border-gray-200 hover:border-purple-300'
+                          )}
+                          style={isSelected ? { boxShadow: '0 0 0 3px rgba(168,85,247,0.2)' } : {}}
+                          title={t.name}
+                        >
+                          <div
+                            className="w-16 h-20 flex flex-col items-center justify-center gap-1"
+                            style={{ background: t.bg }}
+                          >
+                            <div className="w-8 h-1.5 rounded-sm bg-white/80" />
+                            <div className="w-6 h-1 rounded-sm bg-white/50" />
+                            <div className="w-8 h-px bg-white/40 mt-1" />
+                            <div className="w-8 h-px bg-white/30 mt-0.5" />
+                            <div className="w-6 h-px bg-white/30 mt-0.5" />
+                          </div>
+                          <div className="px-1.5 py-1 bg-white text-center">
+                            <p className="text-[9px] font-semibold text-gray-700 truncate w-14">{t.name}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                    <button
+                      onClick={() => setShowTemplatePanel(true)}
+                      className="shrink-0 w-20 rounded-[3px] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:border-purple-300 hover:text-purple-500 transition-colors"
+                    >
+                      <Layout className="h-4 w-4" />
+                      <span className="text-[9px] font-semibold">More…</span>
+                    </button>
                   </div>
-                  <div id="resume-preview-target" className="bg-gray-50 p-3">
-                    <div className="shadow-lg rounded-lg overflow-hidden">
+                </div>
+
+                {/* Live preview */}
+                <div className="rounded-[3px] bg-white border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                    <p className="text-sm font-semibold text-gray-800">
+                      Resume Preview
+                    </p>
+                    <span className="ml-auto brand-gradient-text text-sm font-bold">{currentTemplate.name}</span>
+                  </div>
+                  <div id="resume-preview-target" className="bg-gray-50 p-2 sm:p-3">
+                    <div className="shadow-lg rounded-sm overflow-hidden">
                       <ScaledResumePreview sections={sections} templateName={currentTemplate.name} />
                     </div>
                   </div>
                 </div>
 
-                {/* Change template CTA */}
-                <div className="flex items-center justify-between rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">
-                      Current: <span className="brand-gradient-text">{currentTemplate.name}</span>
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{currentTemplate.category} · switch any time</p>
-                  </div>
-                  <button
-                    onClick={() => setShowTemplatePanel(true)}
-                    className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-                    style={{ background: 'var(--melo-gradient)' }}
-                  >
-                    <Layout className="h-4 w-4" />
-                    Change Template
-                  </button>
-                </div>
               </div>
             )}
 
@@ -294,14 +322,14 @@ export default function BuilderPage() {
               {step > 0 ? (
                 <button
                   onClick={() => setStep(step - 1)}
-                  className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  className="flex items-center gap-1.5 rounded-[3px] px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" /> Back
                 </button>
               ) : <div />}
               <button
                 onClick={() => setStep(step + 1)}
-                className="flex items-center gap-2 rounded-xl px-7 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
+                className="flex items-center gap-2 rounded-[3px] px-7 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-95"
                 style={{
                   background: 'var(--melo-gradient)',
                   boxShadow: '0 4px 20px rgba(168,85,247,0.35)',

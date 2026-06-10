@@ -60,6 +60,7 @@ export type BuilderState = {
   experience: WorkEntry[]
   education: EducationEntry[]
   skills: SkillEntry[]
+  strengths: string[]       // personal strengths (shown in Skills section on resume)
   targetJobTitle: string
   targetCountry: string
   targetCity: string
@@ -84,6 +85,8 @@ export type BuilderState = {
   removeEducation: (id: string) => void
   addSkill: (skill: Omit<SkillEntry, 'id'>) => void
   removeSkill: (id: string) => void
+  addStrength: (strength: string) => void
+  removeStrength: (strength: string) => void
   reset: () => void
 }
 
@@ -108,6 +111,7 @@ export const useBuilderStore = create<BuilderState>()(
       experience: [],
       education: [],
       skills: [],
+      strengths: [],
       targetJobTitle: '',
       targetCountry: '',
       targetCity: '',
@@ -195,10 +199,20 @@ export const useBuilderStore = create<BuilderState>()(
       removeSkill: (id) =>
         set((s) => ({ skills: s.skills.filter(sk => sk.id !== id) })),
 
+      addStrength: (strength) =>
+        set((s) => ({
+          strengths: s.strengths.includes(strength)
+            ? s.strengths
+            : [...s.strengths, strength],
+        })),
+
+      removeStrength: (strength) =>
+        set((s) => ({ strengths: s.strengths.filter(str => str !== strength) })),
+
       reset: () => set({
         templateId: '', templateName: 'Minimal', profilePhoto: '',
         personal: defaultPersonal, experience: [], education: [], skills: [],
-        targetJobTitle: '', targetCountry: '', targetCity: '',
+        strengths: [], targetJobTitle: '', targetCountry: '', targetCity: '',
       }),
     }),
     {
@@ -213,6 +227,7 @@ export const useBuilderStore = create<BuilderState>()(
         experience: s.experience,
         education: s.education,
         skills: s.skills,
+        strengths: s.strengths,
         targetJobTitle: s.targetJobTitle,
         targetCountry: s.targetCountry,
         targetCity: s.targetCity,
@@ -223,7 +238,16 @@ export const useBuilderStore = create<BuilderState>()(
 
 // ─── Convert store → section format for ResumePreviewPanel ───────────────────
 
-export function storeToSections(s: Pick<BuilderState, 'personal' | 'experience' | 'education' | 'skills' | 'profilePhoto'>) {
+export function storeToSections(s: Pick<BuilderState, 'personal' | 'experience' | 'education' | 'skills' | 'profilePhoto' | 'strengths'>) {
+  // Merge regular skills + personal strengths (shown as soft skills on the resume)
+  const skillItems = s.skills.map(sk => ({
+    id: sk.id, name: sk.name, level: sk.level, category: sk.category,
+  }))
+  const strengthItems = (s.strengths ?? []).map((str, i) => ({
+    id: `strength-${i}`, name: str, level: 'intermediate', category: 'soft',
+  }))
+  const allSkills = [...skillItems, ...strengthItems]
+
   return [
     {
       section_type: 'personal_info', sort_order: 0, is_visible: true,
@@ -281,15 +305,8 @@ export function storeToSections(s: Pick<BuilderState, 'personal' | 'experience' 
       },
     },
     {
-      section_type: 'skills', sort_order: 4, is_visible: s.skills.length > 0,
-      content: {
-        items: s.skills.map(sk => ({
-          id: sk.id,
-          name: sk.name,
-          level: sk.level,
-          category: sk.category,
-        })),
-      },
+      section_type: 'skills', sort_order: 4, is_visible: allSkills.length > 0,
+      content: { items: allSkills },
     },
   ]
 }

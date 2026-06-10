@@ -115,10 +115,21 @@ export function PersonalInfoForm() {
     }
   }
 
-  function field(key: keyof typeof personal, label: string, placeholder: string, type = 'text') {
+  function field(
+    key: keyof typeof personal,
+    label: string,
+    placeholder: string,
+    type = 'text',
+    required = false,
+  ) {
     return (
       <div className="space-y-1">
-        <Label className="text-xs font-semibold">{label}</Label>
+        <Label className="text-xs font-semibold">
+          {label}
+          {required
+            ? <span className="ml-1 text-red-400">*</span>
+            : <span className="ml-1 font-normal text-gray-400">optional</span>}
+        </Label>
         <Input
           type={type}
           placeholder={placeholder}
@@ -180,14 +191,14 @@ export function PersonalInfoForm() {
 
       {/* Name */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('firstName', 'First Name *', 'Juan')}
-        {field('lastName',  'Last Name *',  'dela Cruz')}
+        {field('firstName', 'First Name',  'Juan',       'text', true)}
+        {field('lastName',  'Last Name',   'dela Cruz',  'text', true)}
       </div>
 
       {/* Contact */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('email', 'Email',        'juan@example.com',    'email')}
-        {field('phone', 'Phone Number', '+63 912 345 6789',    'tel'  )}
+        {field('email', 'Email Address',  'juan@example.com',  'email', true)}
+        {field('phone', 'Phone Number',   '+63 912 345 6789',  'tel'       )}
       </div>
 
       {/* Location — with detect button */}
@@ -195,11 +206,12 @@ export function PersonalInfoForm() {
         <div className="flex items-center justify-between">
           <Label className="text-xs font-semibold flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 text-purple-400" /> Location
+            <span className="font-normal text-gray-400">optional</span>
           </Label>
           <button
             onClick={detectLocation}
             disabled={locating}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 rounded-[3px] px-2.5 py-1 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-100 transition-colors disabled:opacity-50"
           >
             {locating
               ? <Loader2 className="h-3 w-3 animate-spin" />
@@ -216,8 +228,8 @@ export function PersonalInfoForm() {
 
       {/* Online presence */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('linkedin', 'LinkedIn URL',       'https://linkedin.com/in/…', 'url')}
-        {field('website',  'Portfolio / Website', 'https://yoursite.com',     'url')}
+        {field('linkedin', 'LinkedIn URL',        'https://linkedin.com/in/…', 'url')}
+        {field('website',  'Portfolio / Website', 'https://yoursite.com',      'url')}
       </div>
 
     </div>

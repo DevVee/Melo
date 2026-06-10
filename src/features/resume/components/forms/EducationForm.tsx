@@ -1,34 +1,17 @@
-import { useState } from 'react'
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Loader2, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useBuilderStore } from '@/store/builder.store'
 import { useMutation } from '@tanstack/react-query'
 import { callGroq, GROQ_MODELS } from '@/lib/groq'
 import type { EducationEntry } from '@/store/builder.store'
+import { EDU_LEVELS, DEGREES_BY_LEVEL, inferLevel } from '@/data/degrees'
+import type { EduLevel } from '@/data/degrees'
+import { cn } from '@/lib/utils'
 
-const DEGREES = [
-  { value: 'High School Diploma',        label: 'High School Diploma'                       },
-  { value: 'Senior High School',         label: 'Senior High School (SHS)'                  },
-  { value: 'Certificate',                label: 'Certificate / Short Course'                 },
-  { value: 'Associate Degree',           label: 'Associate Degree'                           },
-  { value: 'Bachelor of Science',        label: 'Bachelor of Science (BS)'                  },
-  { value: 'Bachelor of Arts',           label: 'Bachelor of Arts (BA)'                     },
-  { value: 'Bachelor of Technology',     label: 'Bachelor of Technology (BTech)'             },
-  { value: 'Bachelor of Engineering',    label: 'Bachelor of Engineering (BEng)'             },
-  { value: 'Bachelor of Business Admin', label: 'Bachelor of Business Administration (BBA)'  },
-  { value: 'Master of Science',          label: 'Master of Science (MS)'                    },
-  { value: 'Master of Arts',             label: 'Master of Arts (MA)'                       },
-  { value: 'Master of Business Admin',   label: 'Master of Business Administration (MBA)'    },
-  { value: 'Master of Engineering',      label: 'Master of Engineering (MEng)'               },
-  { value: 'Doctor of Philosophy',       label: 'Doctor of Philosophy (PhD)'                },
-  { value: 'Doctor of Medicine',         label: 'Doctor of Medicine (MD)'                   },
-  { value: 'Juris Doctor',               label: 'Juris Doctor (JD)'                         },
-  { value: 'Doctor of Education',        label: 'Doctor of Education (EdD)'                 },
-  { value: 'Vocational / TESDA',         label: 'Vocational / TESDA NC'                     },
-]
+// ─── Honors quick-picks ───────────────────────────────────────────────────────
 
 const HONORS = [
   'Summa Cum Laude', 'Magna Cum Laude', 'Cum Laude',
@@ -37,18 +20,94 @@ const HONORS = [
   "President's Lister", "Director's Lister",
 ]
 
-const PROGRAM_SUGGESTIONS: Record<string, string[]> = {
-  'Bachelor of Science': ['Computer Science', 'Information Technology', 'Nursing', 'Engineering', 'Business Administration', 'Psychology', 'Education', 'Biology', 'Mathematics', 'Chemistry', 'Physics'],
-  'Bachelor of Arts': ['English', 'Communication', 'Sociology', 'Political Science', 'Philosophy', 'History', 'Fine Arts'],
-  'Bachelor of Engineering': ['Civil Engineering', 'Electrical Engineering', 'Mechanical Engineering', 'Chemical Engineering', 'Electronics Engineering'],
-  'Master of Science': ['Computer Science', 'Data Science', 'Engineering', 'Biology'],
-  'Master of Business Admin': ['Finance', 'Marketing', 'Operations', 'Human Resources', 'Entrepreneurship'],
+// ─── Degree search combobox ───────────────────────────────────────────────────
+
+interface DegreePickerProps {
+  level: EduLevel
+  value: string
+  onChange: (v: string) => void
 }
 
-// ─── Per-entry component — MUST be defined OUTSIDE EducationForm.
-//     Defining it inside causes React to treat it as a new component type on
-//     every render, unmounting/remounting on each keystroke → loses focus after
-//     one character + Select never opens.
+function DegreePicker({ level, value, onChange }: DegreePickerProps) {
+  const [query, setQuery] = useState(value)
+  const [open, setOpen]   = useState(false)
+  const inputRef          = useRef<HTMLInputElement>(null)
+
+  const list = DEGREES_BY_LEVEL[level] ?? []
+  const filtered = query.trim()
+    ? list.filter(d => d.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 10)
+    : list.slice(0, 10)
+
+  function pick(deg: string) {
+    onChange(deg)
+    setQuery(deg)
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <div className="relative flex items-center">
+        <Search className="absolute left-3 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          placeholder="Search or type your degree…"
+          onFocus={() => setOpen(true)}
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true) }}
+          onBlur={() => setTimeout(() => setOpen(false), 160)}
+          className="w-full rounded-[2px] border border-gray-300 pl-9 pr-8 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+        />
+        {query && (
+          <button
+            type="button"
+            className="absolute right-2 p-1 text-gray-400 hover:text-gray-600"
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => { setQuery(''); onChange(''); inputRef.current?.focus() }}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-[2px] border border-gray-200 bg-white shadow-lg text-sm">
+          {filtered.map(deg => (
+            <li key={deg}>
+              <button
+                type="button"
+                className={cn(
+                  'w-full text-left px-3 py-2 hover:bg-purple-50 hover:text-purple-800 transition-colors',
+                  deg === value && 'bg-purple-50 text-purple-800 font-medium'
+                )}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => pick(deg)}
+              >
+                {deg}
+              </button>
+            </li>
+          ))}
+          {/* custom entry if nothing matches exactly */}
+          {query.trim() && !list.some(d => d.toLowerCase() === query.trim().toLowerCase()) && (
+            <li>
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 text-purple-700 italic hover:bg-purple-50 transition-colors border-t border-gray-100"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => pick(query.trim())}
+              >
+                Use "{query.trim()}"
+              </button>
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+// ─── Per-entry component — MUST stay OUTSIDE EducationForm.
+//     Defining it inside causes React to unmount/remount on every render,
+//     breaking focus after one keystroke and preventing Select from opening.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface EntryProps {
@@ -63,10 +122,8 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
   const removeEntry = useBuilderStore(s => s.removeEducation)
   const groqApiKey  = useBuilderStore(s => s.groqApiKey)
 
-  // Local state for custom degree — initialise from existing value
-  const [isCustom, setIsCustom] = useState(
-    () => !!entry?.degree && !DEGREES.find(d => d.value === entry?.degree)
-  )
+  // Infer level from existing degree string (for users who had data before this update)
+  const [level, setLevel] = useState<EduLevel | ''>(() => inferLevel(entry?.degree ?? ''))
 
   if (!entry) return null
 
@@ -76,7 +133,11 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
     updateEntry(entryId, { [field]: value } as Partial<EducationEntry>)
   }
 
-  const programSuggestions = PROGRAM_SUGGESTIONS[entry.degree] ?? []
+  function selectLevel(lv: EduLevel) {
+    setLevel(lv)
+    // Clear degree when switching level so stale value doesn't confuse search
+    upd('degree', '')
+  }
 
   const { mutate: suggestHonors, isPending: suggesting } = useMutation({
     mutationFn: async () => callGroq(
@@ -91,7 +152,7 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
 
   return (
     <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
-      {/* Header row */}
+      {/* ── Header row (collapsed summary) ───────────────────────────────────── */}
       <div
         className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors select-none"
         onClick={() => setExpandedId(isExpanded ? null : entryId)}
@@ -99,7 +160,7 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
         <div className="min-w-0 flex-1">
           <p className="font-medium text-sm text-gray-900 truncate">{entry.school || 'New School'}</p>
           <p className="text-xs text-gray-500 truncate">
-            {[entry.degree, entry.program].filter(Boolean).join(' · ') || 'Add details below'}
+            {[entry.degree, entry.program].filter(Boolean).join(' · ') || 'Tap to fill in details'}
           </p>
         </div>
         <div className="flex items-center gap-2 ml-3 shrink-0">
@@ -116,12 +177,59 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
         </div>
       </div>
 
+      {/* ── Expanded form ─────────────────────────────────────────────────────── */}
       {isExpanded && (
         <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-4">
 
-          {/* School */}
+          {/* ① Level picker */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">
+              What did you finish? <span className="text-red-400">*</span>
+            </Label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {EDU_LEVELS.map(lv => (
+                <button
+                  key={lv.value}
+                  type="button"
+                  onClick={() => selectLevel(lv.value as EduLevel)}
+                  className={cn(
+                    'rounded-[2px] border px-2 py-2.5 text-left transition-all',
+                    level === lv.value
+                      ? 'border-purple-400 bg-purple-50 text-purple-800'
+                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+                  )}
+                >
+                  <div className="text-base leading-none mb-1">{lv.emoji}</div>
+                  <div className="text-xs font-semibold leading-tight">{lv.label}</div>
+                  <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{lv.sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ② Degree — searchable dropdown (only when level selected) */}
+          {level && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">
+                Degree / Course / Certificate
+                <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
+              </Label>
+              <DegreePicker
+                level={level}
+                value={entry.degree}
+                onChange={v => upd('degree', v)}
+              />
+              <p className="text-[11px] text-gray-400">
+                Start typing to search, or type your own and press Enter.
+              </p>
+            </div>
+          )}
+
+          {/* ③ School / University */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">School / University *</Label>
+            <Label className="text-sm font-medium text-gray-700">
+              School / University <span className="text-red-400">*</span>
+            </Label>
             <Input
               value={entry.school}
               onChange={e => upd('school', e.target.value)}
@@ -129,103 +237,52 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
             />
           </div>
 
-          {/* Degree */}
+          {/* ④ Course / Major */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">Degree / Qualification</Label>
-            {isCustom ? (
-              <div className="flex gap-2">
-                <Input
-                  value={entry.degree}
-                  onChange={e => upd('degree', e.target.value)}
-                  placeholder="Type your degree"
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline" size="sm"
-                  onClick={() => { setIsCustom(false); upd('degree', '') }}
-                >
-                  Pick list
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Select
-                  value={entry.degree || '__none__'}
-                  onValueChange={v => upd('degree', v === '__none__' ? '' : v)}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select degree…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Select degree —</SelectItem>
-                    {DEGREES.map(d => (
-                      <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline" size="sm" className="shrink-0"
-                  onClick={() => setIsCustom(true)}
-                >
-                  Other
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Program / Major */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-gray-700">Course / Major / Field of Study</Label>
+            <Label className="text-sm font-medium text-gray-700">
+              Course / Major / Strand
+              <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
+            </Label>
             <Input
               value={entry.program}
               onChange={e => upd('program', e.target.value)}
-              placeholder="e.g. Computer Science, Nursing, Marketing"
-              list={`prog-${entryId}`}
+              placeholder="e.g. Computer Science, Nursing, STEM strand, Marketing"
             />
-            {programSuggestions.length > 0 && (
-              <datalist id={`prog-${entryId}`}>
-                {programSuggestions.map(p => <option key={p} value={p} />)}
-              </datalist>
-            )}
-            {programSuggestions.length > 0 && !entry.program && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {programSuggestions.slice(0, 6).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => upd('program', p)}
-                    className="rounded border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs text-gray-700 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50 transition-colors"
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Year + GPA */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* ⑤ Years attended */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">Start Year</Label>
+              <Label className="text-sm font-medium text-gray-700">
+                Start Year
+                <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
+              </Label>
               <Input
                 type="number"
                 value={entry.startDate}
                 onChange={e => upd('startDate', e.target.value)}
                 placeholder="2020"
-                min="1950" max="2030"
+                min="1950" max="2035"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">End Year</Label>
+              <Label className="text-sm font-medium text-gray-700">
+                End Year
+                <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
+              </Label>
               <Input
                 type="number"
                 value={entry.endDate}
                 onChange={e => upd('endDate', e.target.value)}
-                placeholder="2024 or Present"
-                min="1950" max="2030"
+                placeholder="2024"
+                min="1950" max="2035"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">GPA / Grade</Label>
+              <Label className="text-sm font-medium text-gray-700">
+                GPA / Grade
+                <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
+              </Label>
               <Input
                 type="number" step="0.01" min="1" max="5"
                 value={entry.gpa}
@@ -235,13 +292,16 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
             </div>
           </div>
 
-          {/* Honors */}
+          {/* ⑥ Honors / Awards */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-gray-700">Honors / Awards</Label>
+              <Label className="text-sm font-medium text-gray-700">
+                Honors / Awards
+                <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
+              </Label>
               <button
                 className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 transition-colors"
-                disabled={suggesting}
+                disabled={suggesting || !entry.school}
                 onClick={() => suggestHonors()}
               >
                 {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
@@ -262,8 +322,9 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
                 {HONORS.slice(0, 5).map(h => (
                   <button
                     key={h}
+                    type="button"
                     onClick={() => upd('honors', h)}
-                    className="rounded border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs text-gray-700 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                    className="rounded-[2px] border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs text-gray-700 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50 transition-colors"
                   >
                     {h}
                   </button>
@@ -295,6 +356,15 @@ export function EducationForm() {
 
   return (
     <div className="space-y-3">
+      {education.length === 0 && (
+        <div className="text-center py-5 border border-dashed border-gray-200 rounded-[2px]">
+          <p className="text-sm text-gray-500 font-medium">No education added yet</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Add your school, college, or TESDA course. Every level counts!
+          </p>
+        </div>
+      )}
+
       {education.map(entry => (
         <EducationEntry
           key={entry.id}
@@ -304,15 +374,9 @@ export function EducationForm() {
         />
       ))}
 
-      <Button variant="outline" className="w-full gap-2" onClick={handleAdd}>
-        <Plus className="h-4 w-4" /> Add Education
+      <Button variant="outline" className="w-full gap-2 rounded-[3px]" onClick={handleAdd}>
+        <Plus className="h-4 w-4" /> Add School / Course
       </Button>
-
-      {education.length === 0 && (
-        <p className="text-sm text-center text-gray-500 py-3">
-          Add your school, college, or training course here.
-        </p>
-      )}
     </div>
   )
 }
