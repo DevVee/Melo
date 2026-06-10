@@ -21,8 +21,12 @@ export function MinimalTemplate({ data }: Props) {
 
   return (
     <div
-      className="bg-white text-gray-800 max-w-[800px] mx-auto text-sm"
-      style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+      className="bg-white text-gray-800 text-sm flex flex-col"
+      style={{
+        fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+        height: '100%',
+        minHeight: '1123px',
+      }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="px-9 pt-9 pb-6" style={{ borderLeft: `5px solid ${primary}` }}>
@@ -44,7 +48,7 @@ export function MinimalTemplate({ data }: Props) {
         </div>
       </header>
 
-      <div className="px-9 pb-9 space-y-5">
+      <div className="px-9 pb-9 space-y-5" style={{ flex: '1' }}>
         {/* ── Summary ───────────────────────────────────────────────────────── */}
         {professional_summary && (
           <MSection title="About" primary={primary}>

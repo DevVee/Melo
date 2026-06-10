@@ -82,8 +82,10 @@ export function ResumePreviewPanel({ sections, templateName }: Props) {
         '--resume-primary': customization.primary_color,
         '--resume-secondary': customization.secondary_color,
         '--resume-margin': `${customization.margins}px`,
+        // Explicit height so templates can use height:100% to fill the A4 canvas
+        height: '100%',
+        minHeight: '100%',
       } as React.CSSProperties}
-      className="min-h-full"
     >
       <Template data={data} />
     </div>

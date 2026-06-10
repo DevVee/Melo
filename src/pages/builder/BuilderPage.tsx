@@ -568,7 +568,8 @@ function DoneStep({
           id="resume-export-canvas"
           style={{
             position: 'fixed', top: 0, left: '-9999px',
-            width: '794px', minHeight: '1123px',
+            width: '794px', height: '1123px', minHeight: '1123px',
+            display: 'flex', flexDirection: 'column',
             background: '#ffffff', pointerEvents: 'none',
           }}
           aria-hidden="true"

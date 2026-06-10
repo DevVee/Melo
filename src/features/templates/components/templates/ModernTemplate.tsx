@@ -21,13 +21,18 @@ export function ModernTemplate({ data }: Props) {
 
   return (
     <div
-      className="bg-white text-gray-800 max-w-200 mx-auto text-sm flex min-h-full"
-      style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+      className="bg-white text-gray-800 text-sm flex"
+      style={{
+        fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+        // Fill the full A4 canvas height — enables sidebar to stretch end-to-end
+        height: '100%',
+        minHeight: '1123px',
+      }}
     >
-      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
+      {/* ── Sidebar — stretches to full A4 height via flex align-items:stretch ── */}
       <div
         className="w-56 shrink-0 text-white p-7 space-y-6"
-        style={{ backgroundColor: primary }}
+        style={{ backgroundColor: primary, alignSelf: 'stretch' }}
       >
         {/* Photo / Avatar */}
         <div className="flex flex-col items-center text-center">

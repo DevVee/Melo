@@ -13,8 +13,12 @@ export function HarvardTemplate({ data }: Props) {
 
   return (
     <div
-      className="bg-white text-gray-900 p-10 max-w-[800px] mx-auto text-sm leading-relaxed"
-      style={{ fontFamily: "'Roboto', 'Inter', Arial, sans-serif" }}
+      className="bg-white text-gray-900 p-10 text-sm leading-relaxed"
+      style={{
+        fontFamily: "'Roboto', 'Inter', Arial, sans-serif",
+        height: '100%',
+        minHeight: '1123px',
+      }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="text-center mb-6 pb-5 border-b-2 border-gray-900">

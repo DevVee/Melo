@@ -61,8 +61,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 async function captureElement(element: HTMLElement): Promise<string> {
   await fontsReady()
 
-  // Measure natural height BEFORE any style override (most reliable)
-  const naturalH = Math.max(A4_H_PX, element.scrollHeight || element.offsetHeight)
+  // (naturalH no longer used — we re-measure after setting explicit styles)
 
   // ── Overlay ──────────────────────────────────────────────────────────────────
   const overlay = document.createElement('div')
@@ -79,8 +78,8 @@ async function captureElement(element: HTMLElement): Promise<string> {
 
   // ── Save & override element styles ───────────────────────────────────────────
   const keys = ['position','top','left','right','bottom','zIndex','width',
-                 'minHeight','maxWidth','borderRadius','boxShadow','overflow',
-                 'pointerEvents','margin','transform','opacity'] as const
+                 'height','minHeight','maxWidth','borderRadius','boxShadow','overflow',
+                 'pointerEvents','margin','transform','opacity','display','flexDirection'] as const
   type StyleKey = typeof keys[number]
   const saved: Partial<CSSStyleDeclaration> = {}
   keys.forEach(k => { saved[k] = element.style[k as StyleKey] })
@@ -93,7 +92,7 @@ async function captureElement(element: HTMLElement): Promise<string> {
     bottom:        'auto',
     zIndex:        '999999',
     width:         `${A4_W_PX}px`,
-    minHeight:     `${A4_H_PX}px`,   // always at least one A4 page
+    minHeight:     `${A4_H_PX}px`,
     maxWidth:      'none',
     borderRadius:  '0',
     boxShadow:     'none',
@@ -106,8 +105,17 @@ async function captureElement(element: HTMLElement): Promise<string> {
 
   await waitFrames(6)
 
-  // Re-measure after reflow (may have grown due to minHeight)
-  const captureH = Math.max(naturalH, element.scrollHeight || A4_H_PX)
+  // Set an EXPLICIT height so child templates (height:100%) can stretch to fill A4.
+  // Use max(A4_H_PX, contentHeight) so multi-page resumes still expand correctly.
+  const measuredH = Math.max(A4_H_PX, element.scrollHeight || A4_H_PX)
+  element.style.height = `${measuredH}px`
+  element.style.display = 'flex'
+  element.style.flexDirection = 'column'
+
+  await waitFrames(4)   // wait for children to recalculate with the explicit height
+
+  // Re-measure after explicit height + children have reflowed
+  const captureH = Math.max(measuredH, element.scrollHeight || A4_H_PX)
 
   try {
     const dataUrl = await toPng(element, {

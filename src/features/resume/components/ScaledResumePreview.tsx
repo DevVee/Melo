@@ -68,7 +68,7 @@ export function ScaledResumePreview({ sections, templateName, className }: Props
         ref={innerRef}
         style={{
           width: `${A4_WIDTH}px`,
-          minHeight: `${A4_HEIGHT}px`,
+          height: `${innerHeight}px`,   // explicit height so children can use height:100%
           transformOrigin: 'top left',
           transform: `scale(${scale})`,
         }}

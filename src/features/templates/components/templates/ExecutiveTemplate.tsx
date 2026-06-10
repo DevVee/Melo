@@ -15,8 +15,12 @@ export function ExecutiveTemplate({ data }: Props) {
 
   return (
     <div
-      className="bg-white text-gray-800 max-w-200 mx-auto text-sm"
-      style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+      className="bg-white text-gray-800 text-sm flex flex-col"
+      style={{
+        fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+        height: '100%',
+        minHeight: '1123px',
+      }}
     >
       {/* ── Premium Header ────────────────────────────────────────────────── */}
       <header className="px-12 pt-10 pb-8 text-white relative overflow-hidden" style={{ backgroundColor: primary }}>
@@ -50,7 +54,7 @@ export function ExecutiveTemplate({ data }: Props) {
       {/* Gold accent bar */}
       <div className="h-[3px]" style={{ backgroundColor: accent }} />
 
-      <div className="px-12 py-8 space-y-7">
+      <div className="px-12 py-8 space-y-7" style={{ flex: '1' }}>
 
         {/* Summary */}
         {professional_summary && (
