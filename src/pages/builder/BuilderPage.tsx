@@ -663,8 +663,6 @@ function AIPolishScreen({ onDone, onScoreReady }: { onDone: () => void; onScoreR
   const personal   = useBuilderStore(s => s.personal)
   const experience = useBuilderStore(s => s.experience)
   const education  = useBuilderStore(s => s.education)
-  const skills     = useBuilderStore(s => s.skills)
-  const strengths  = useBuilderStore(s => s.strengths)
   const hobbies    = useBuilderStore(s => s.hobbies)
   const targetJob  = useBuilderStore(s => s.targetJobTitle)
 
