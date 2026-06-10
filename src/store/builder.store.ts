@@ -60,7 +60,8 @@ export type BuilderState = {
   experience: WorkEntry[]
   education: EducationEntry[]
   skills: SkillEntry[]
-  strengths: string[]       // personal strengths (shown in Skills section on resume)
+  strengths: string[]       // personal strengths — own section on resume
+  hobbies: string           // AI-generated hobbies/interests sentence
   targetJobTitle: string
   targetCountry: string
   targetCity: string
@@ -87,6 +88,7 @@ export type BuilderState = {
   removeSkill: (id: string) => void
   addStrength: (strength: string) => void
   removeStrength: (strength: string) => void
+  setHobbies: (text: string) => void
   reset: () => void
 }
 
@@ -97,6 +99,8 @@ const defaultPersonal: PersonalInfo = {
   email: '', phone: '', address: '', city: '', country: '',
   linkedin: '', website: '', summary: '',
 }
+
+const DEFAULT_HOBBIES = ''
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -112,6 +116,7 @@ export const useBuilderStore = create<BuilderState>()(
       education: [],
       skills: [],
       strengths: [],
+      hobbies: DEFAULT_HOBBIES,
       targetJobTitle: '',
       targetCountry: '',
       targetCity: '',
@@ -131,7 +136,7 @@ export const useBuilderStore = create<BuilderState>()(
             id: crypto.randomUUID(),
             company: '', position: '', employmentType: 'full_time',
             location: '', startDate: '', endDate: '', isCurrent: false,
-            bullets: [''],
+            bullets: ['', '', '', '', ''],
           }],
         })),
 
@@ -209,10 +214,13 @@ export const useBuilderStore = create<BuilderState>()(
       removeStrength: (strength) =>
         set((s) => ({ strengths: s.strengths.filter(str => str !== strength) })),
 
+      setHobbies: (hobbies) => set({ hobbies }),
+
       reset: () => set({
         templateId: '', templateName: 'Minimal', profilePhoto: '',
         personal: defaultPersonal, experience: [], education: [], skills: [],
-        strengths: [], targetJobTitle: '', targetCountry: '', targetCity: '',
+        strengths: [], hobbies: DEFAULT_HOBBIES,
+        targetJobTitle: '', targetCountry: '', targetCity: '',
       }),
     }),
     {
@@ -228,6 +236,7 @@ export const useBuilderStore = create<BuilderState>()(
         education: s.education,
         skills: s.skills,
         strengths: s.strengths,
+        hobbies: s.hobbies,
         targetJobTitle: s.targetJobTitle,
         targetCountry: s.targetCountry,
         targetCity: s.targetCity,
@@ -238,15 +247,11 @@ export const useBuilderStore = create<BuilderState>()(
 
 // ─── Convert store → section format for ResumePreviewPanel ───────────────────
 
-export function storeToSections(s: Pick<BuilderState, 'personal' | 'experience' | 'education' | 'skills' | 'profilePhoto' | 'strengths'>) {
-  // Merge regular skills + personal strengths (shown as soft skills on the resume)
+export function storeToSections(s: Pick<BuilderState, 'personal' | 'experience' | 'education' | 'skills' | 'profilePhoto' | 'strengths' | 'hobbies'>) {
+  // Skills — pure technical/categorised skills only (strengths are separate)
   const skillItems = s.skills.map(sk => ({
     id: sk.id, name: sk.name, level: sk.level, category: sk.category,
   }))
-  const strengthItems = (s.strengths ?? []).map((str, i) => ({
-    id: `strength-${i}`, name: str, level: 'intermediate', category: 'soft',
-  }))
-  const allSkills = [...skillItems, ...strengthItems]
 
   return [
     {
@@ -305,8 +310,18 @@ export function storeToSections(s: Pick<BuilderState, 'personal' | 'experience' 
       },
     },
     {
-      section_type: 'skills', sort_order: 4, is_visible: allSkills.length > 0,
-      content: { items: allSkills },
+      section_type: 'skills', sort_order: 4, is_visible: skillItems.length > 0,
+      content: { items: skillItems },
+    },
+    // Personal Strengths — own section, separate from Skills
+    {
+      section_type: 'strengths', sort_order: 5, is_visible: (s.strengths ?? []).length > 0,
+      content: { items: (s.strengths ?? []).map(str => ({ name: str })) },
+    },
+    // Hobbies / Interests — AI-generated single sentence
+    {
+      section_type: 'interests', sort_order: 6, is_visible: !!(s.hobbies ?? '').trim(),
+      content: { text: (s.hobbies ?? '').trim() },
     },
   ]
 }

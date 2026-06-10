@@ -17,12 +17,14 @@ type Props = {
   sections: Section[]
   templateName?: string
   className?: string
+  primaryColor?: string
+  secondaryColor?: string
 }
 
 const A4_WIDTH  = 794
 const A4_HEIGHT = 1123  // minimum — always show at least one full A4 page
 
-export function ScaledResumePreview({ sections, templateName, className }: Props) {
+export function ScaledResumePreview({ sections, templateName, className, primaryColor, secondaryColor }: Props) {
   const outerRef  = useRef<HTMLDivElement>(null)
   const innerRef  = useRef<HTMLDivElement>(null)
   const [scale, setScale]             = useState(1)
@@ -73,7 +75,7 @@ export function ScaledResumePreview({ sections, templateName, className }: Props
           transform: `scale(${scale})`,
         }}
       >
-        <ResumePreviewPanel sections={sections} templateName={templateName} />
+        <ResumePreviewPanel sections={sections} templateName={templateName} primaryColor={primaryColor} secondaryColor={secondaryColor} />
       </div>
     </div>
   )

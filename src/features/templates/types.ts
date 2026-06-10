@@ -7,7 +7,11 @@ export type ResumeData = {
   work_experience: WorkExperience[]
   education: Education[]
   skills: Skill[]
+  /** Personal strengths — separate section from skills */
+  strengths?: { name: string }[]
   projects: Project[]
   certifications: Certification[]
+  /** Hobbies / Interests — single AI-generated sentence */
+  interests?: string
   sections: { section_type: string; sort_order: number; is_visible: boolean }[]
 }

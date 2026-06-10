@@ -56,7 +56,7 @@ function DegreePicker({ level, value, onChange }: DegreePickerProps) {
           onFocus={() => setOpen(true)}
           onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true) }}
           onBlur={() => setTimeout(() => setOpen(false), 160)}
-          className="w-full rounded-[2px] border border-gray-300 pl-9 pr-8 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+          className="w-full rounded-[3px] border border-gray-300 pl-9 pr-8 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
         />
         {query && (
           <button
@@ -70,7 +70,7 @@ function DegreePicker({ level, value, onChange }: DegreePickerProps) {
         )}
       </div>
       {open && filtered.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-[2px] border border-gray-200 bg-white shadow-lg text-sm">
+        <ul className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-[3px] border border-gray-200 bg-white shadow-lg text-sm">
           {filtered.map(deg => (
             <li key={deg}>
               <button
@@ -184,8 +184,11 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
           {/* ① Level picker */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">
-              What did you finish? <span className="text-red-400">*</span>
+              What's your highest education? <span className="text-red-400">*</span>
             </Label>
+            <p className="text-xs text-gray-400 -mt-1">
+              Pick the level you completed or are currently attending — every level counts on a resume! 🙌
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {EDU_LEVELS.map(lv => (
                 <button
@@ -193,13 +196,12 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
                   type="button"
                   onClick={() => selectLevel(lv.value as EduLevel)}
                   className={cn(
-                    'rounded-[2px] border px-2 py-2.5 text-left transition-all',
+                    'rounded-[3px] border px-2 py-2.5 text-left transition-all',
                     level === lv.value
                       ? 'border-purple-400 bg-purple-50 text-purple-800'
                       : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300 hover:bg-purple-50'
                   )}
                 >
-                  <div className="text-base leading-none mb-1">{lv.emoji}</div>
                   <div className="text-xs font-semibold leading-tight">{lv.label}</div>
                   <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{lv.sub}</div>
                 </button>
@@ -228,7 +230,7 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
           {/* ③ School / University */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
-              School / University <span className="text-red-400">*</span>
+              Which school did you attend? <span className="text-red-400">*</span>
             </Label>
             <Input
               value={entry.school}
@@ -240,7 +242,7 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
           {/* ④ Course / Major */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
-              Course / Major / Strand
+              What course or strand did you take?
               <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
             </Label>
             <Input
@@ -254,7 +256,7 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">
-                Start Year
+                Year Started
                 <span className="ml-1 text-xs font-normal text-gray-400">optional</span>
               </Label>
               <Input
@@ -324,7 +326,7 @@ function EducationEntry({ entryId, expandedId, setExpandedId }: EntryProps) {
                     key={h}
                     type="button"
                     onClick={() => upd('honors', h)}
-                    className="rounded-[2px] border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs text-gray-700 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                    className="rounded-[3px] border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs text-gray-700 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50 transition-colors"
                   >
                     {h}
                   </button>
@@ -357,10 +359,10 @@ export function EducationForm() {
   return (
     <div className="space-y-3">
       {education.length === 0 && (
-        <div className="text-center py-5 border border-dashed border-gray-200 rounded-[2px]">
-          <p className="text-sm text-gray-500 font-medium">No education added yet</p>
+        <div className="text-center py-5 border border-dashed border-gray-200 rounded-[3px]">
+          <p className="text-sm text-gray-500 font-medium">No education added yet 🎓</p>
           <p className="text-xs text-gray-400 mt-1">
-            Add your school, college, or TESDA course. Every level counts!
+            Even high school counts — every level shows recruiters your foundation. Tap below to add!
           </p>
         </div>
       )}
@@ -375,7 +377,7 @@ export function EducationForm() {
       ))}
 
       <Button variant="outline" className="w-full gap-2 rounded-[3px]" onClick={handleAdd}>
-        <Plus className="h-4 w-4" /> Add School / Course
+        <Plus className="h-4 w-4" /> Add Another School or Course
       </Button>
     </div>
   )

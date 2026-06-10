@@ -57,7 +57,9 @@ export type Education = {
 export type Skill = {
   id: string
   name: string
-  category: 'technical' | 'soft' | 'language' | 'framework' | 'platform' | 'tool' | 'certification'
+  /** Free-form category label — e.g. "Frontend Development", "Backend Development", "Soft Skills", etc.
+   *  Legacy short keys (technical | soft | language | framework | platform | tool) are still supported. */
+  category: string
   level?: import('./database').SkillLevel
 }
 

@@ -1,13 +1,13 @@
 /** All education levels and their searchable degree lists */
 
 export const EDU_LEVELS = [
-  { value: 'elementary', label: 'Elementary',          sub: 'Grade 1–6 / Primary',    emoji: '📖' },
-  { value: 'jhs',        label: 'Junior High School',  sub: 'Grade 7–10',             emoji: '🏫' },
-  { value: 'shs',        label: 'Senior High School',  sub: 'Grade 11–12',            emoji: '📚' },
-  { value: 'vocational', label: 'Vocational / TESDA',  sub: 'NC, Diploma, Certificate',emoji: '🔧' },
-  { value: 'college',    label: "College / University", sub: "Bachelor's Degree",      emoji: '🎓' },
-  { value: 'masters',    label: "Master's Degree",     sub: 'Post-Graduate',           emoji: '📜' },
-  { value: 'doctorate',  label: 'Doctorate',           sub: 'PhD, MD, JD, and more',  emoji: '🏆' },
+  { value: 'elementary', label: 'Elementary',          sub: 'Grade 1–6 / Primary',    emoji: '' },
+  { value: 'jhs',        label: 'High School',         sub: 'Grade 7–10',             emoji: '' },
+  { value: 'shs',        label: 'Senior High School',  sub: 'Grade 11–12',            emoji: '' },
+  { value: 'vocational', label: 'Vocational / TESDA',  sub: 'NC, Diploma, Certificate',emoji: '' },
+  { value: 'college',    label: "College / University", sub: "Bachelor's Degree",      emoji: '' },
+  { value: 'masters',    label: "Master's Degree",     sub: 'Post-Graduate',           emoji: '' },
+  { value: 'doctorate',  label: 'Doctorate',           sub: 'PhD, MD, JD, and more',  emoji: '' },
 ] as const
 
 export type EduLevel = typeof EDU_LEVELS[number]['value']

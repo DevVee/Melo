@@ -117,15 +117,15 @@ export function PersonalInfoForm() {
 
   function field(
     key: keyof typeof personal,
-    label: string,
+    question: string,
     placeholder: string,
     type = 'text',
     required = false,
   ) {
     return (
-      <div className="space-y-1">
-        <Label className="text-xs font-semibold">
-          {label}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-gray-700">
+          {question}
           {required
             ? <span className="ml-1 text-red-400">*</span>
             : <span className="ml-1 font-normal text-gray-400">optional</span>}
@@ -145,10 +145,10 @@ export function PersonalInfoForm() {
 
       {/* Show AI-generated title if already set */}
       {personal.professionalTitle && (
-        <div className="rounded-xl bg-purple-50 border border-purple-100 px-3 py-2 flex items-center gap-2">
+        <div className="rounded-[3px] bg-purple-50 border border-purple-100 px-3 py-2 flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-purple-400 shrink-0" />
           <div className="min-w-0">
-            <p className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">AI-generated title</p>
+            <p className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Your resume headline</p>
             <p className="text-sm font-semibold text-gray-800 truncate">{personal.professionalTitle}</p>
           </div>
         </div>
@@ -158,19 +158,19 @@ export function PersonalInfoForm() {
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
           <div
-            className="h-20 w-20 rounded-full overflow-hidden border-2 border-dashed border-border bg-muted flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
+            className="h-20 w-20 rounded-full overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center cursor-pointer hover:border-purple-400 transition-colors"
             onClick={() => fileRef.current?.click()}
           >
             {profilePhoto ? (
               <img src={profilePhoto} alt="Profile" className="h-full w-full object-cover" />
             ) : (
-              <Camera className="h-6 w-6 text-muted-foreground" />
+              <Camera className="h-6 w-6 text-gray-400" />
             )}
           </div>
           {profilePhoto && (
             <button
               onClick={() => setPhoto('')}
-              className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center hover:opacity-80"
+              className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:opacity-80"
             >
               <X className="h-3 w-3" />
             </button>
@@ -178,11 +178,11 @@ export function PersonalInfoForm() {
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-800">Profile Photo</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Optional. Appears on resume.<br />JPG or PNG.</p>
+          <p className="text-sm font-semibold text-gray-800">Got a professional photo?</p>
+          <p className="text-xs text-gray-500 mt-0.5">Totally optional — some templates show it.<br />JPG or PNG, any size.</p>
           <button
             onClick={() => fileRef.current?.click()}
-            className="mt-2 text-xs text-primary underline hover:no-underline"
+            className="mt-2 text-xs text-purple-600 underline hover:no-underline"
           >
             {profilePhoto ? 'Change photo' : 'Upload photo'}
           </button>
@@ -190,24 +190,31 @@ export function PersonalInfoForm() {
       </div>
 
       {/* Name */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('firstName', 'First Name',  'Juan',       'text', true)}
-        {field('lastName',  'Last Name',   'dela Cruz',  'text', true)}
+      <div>
+        <p className="text-xs font-semibold text-gray-700 mb-2">What's your full name? <span className="text-red-400">*</span></p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {field('firstName', 'First name',  'e.g. Juan',       'text', false)}
+          {field('lastName',  'Last name',   'e.g. dela Cruz',  'text', false)}
+        </div>
       </div>
 
       {/* Contact */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('email', 'Email Address',  'juan@example.com',  'email', true)}
-        {field('phone', 'Phone Number',   '+63 912 345 6789',  'tel'       )}
+      <div>
+        <p className="text-xs font-semibold text-gray-700 mb-2">How can employers reach you?</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {field('email', 'Email address',  'juan@example.com',  'email', true)}
+          {field('phone', 'Phone number',   '+63 912 345 6789',  'tel'       )}
+        </div>
       </div>
 
       {/* Location — with detect button */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-xs font-semibold flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5 text-purple-400" /> Location
+          <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-purple-400" />
+            Where are you based?
             <span className="font-normal text-gray-400">optional</span>
-          </Label>
+          </p>
           <button
             onClick={detectLocation}
             disabled={locating}
@@ -216,20 +223,23 @@ export function PersonalInfoForm() {
             {locating
               ? <Loader2 className="h-3 w-3 animate-spin" />
               : <Navigation className="h-3 w-3" />}
-            {locating ? 'Detecting…' : 'Detect my location'}
+            {locating ? 'Detecting…' : 'Use my location'}
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {field('city',    'City / Province',    'e.g. Balayan, Batangas'   )}
           {field('country', 'Country',            'e.g. Philippines'         )}
-          {field('address', 'Barangay / Street',  'e.g. Barangay San Lorenzo')}
+          {field('address', 'Street / Barangay',  'e.g. Brgy San Lorenzo'    )}
         </div>
       </div>
 
       {/* Online presence */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {field('linkedin', 'LinkedIn URL',        'https://linkedin.com/in/…', 'url')}
-        {field('website',  'Portfolio / Website', 'https://yoursite.com',      'url')}
+      <div>
+        <p className="text-xs font-semibold text-gray-700 mb-2">Any online profiles? <span className="font-normal text-gray-400">optional</span></p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {field('linkedin', 'LinkedIn',        'linkedin.com/in/your-name', 'url')}
+          {field('website',  'Portfolio / Website', 'yoursite.com',           'url')}
+        </div>
       </div>
 
     </div>
